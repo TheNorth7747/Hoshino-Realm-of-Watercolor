@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "shardCollectRadius": 1.6,
+  "bloomDurationSeconds": 1.2,
+  "intro": {
+    "speaker": "团仔",
+    "lines": ["绘本的颜色睡着了。别怕，用脚步把它们唤醒。", "跟着我，先去前面的蓝花坡。"],
+    "objective": "跟随团仔，前往蓝花坡"
+  },
+  "nodes": {
+    "flower": {
+      "title": "蓝花坡",
+      "requires": [],
+      "speaker": "团仔",
+      "dialogue": [
+        "蓝花记得天空的颜色。你一到，它们就想起来了。",
+        "看，颜色正从你的脚下漫开。",
+        "拾起那枚星屑，我们再去溪边。"
+      ],
+      "objective": "前往蓝花坡，按 E 唤醒蓝花",
+      "shardObjective": "靠近并拾起蓝花坡的星屑",
+      "interactLabel": "唤醒蓝花坡",
+      "completeOn": "interact",
+      "shardOffset": { "x": 1.6, "z": 1.2 }
+    },
+    "stream": {
+      "title": "溪流转折",
+      "requires": ["flower"],
+      "speaker": "团仔",
+      "dialogue": [
+        "溪水把灰色冲走了，蓝色正在回来。",
+        "听，水声也变轻快了。",
+        "带上星屑，花树就在前面。"
+      ],
+      "objective": "到溪边按 E，让溪水恢复蓝色",
+      "shardObjective": "靠近并拾起溪边的星屑",
+      "interactLabel": "恢复溪水",
+      "lockedHint": "溪水还在等蓝花坡先醒来",
+      "completeOn": "interact",
+      "shardOffset": { "x": -1.8, "z": 1.0 }
+    },
+    "tree": {
+      "title": "花树根下",
+      "requires": ["stream"],
+      "speaker": "团仔",
+      "dialogue": [
+        "就是这里。花树守着整片花野的记忆。",
+        "最后一枚星屑在树根旁，去拾起它。",
+        "它会替你说出那句唤醒的话。"
+      ],
+      "objective": "到花树根下按 E，唤醒花树",
+      "shardObjective": "拾起树根旁的星屑，唤醒花树",
+      "interactLabel": "唤醒花树",
+      "lockedHint": "花树还在等溪水恢复颜色",
+      "completeOn": "shard",
+      "shardOffset": { "x": 1.4, "z": 1.8 }
+    }
+  },
+  "ending": {
+    "title": "花野重新有了颜色",
+    "lines": ["你走过的路，都成了颜色。", "探索本身，就是修复世界的方式。"],
+    "pendingObjective": "花树正在醒来……",
+    "delaySeconds": 2.5,
+    "restartLabel": "重新进入绘本",
+    "elapsedLabel": "用时"
+  },
+  "prompts": {
+    "interactKey": "按 E",
+    "continueHint": "E / 点击继续"
+  }
+}
