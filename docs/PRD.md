@@ -1,9 +1,12 @@
-# 《星野：水彩之境》3D 叙事探索 Demo 需求文档
+# Hoshino: Realm of Watercolor
 
+> 中文名：《星野：水彩之境》
+> 文档：3D 叙事探索 Demo 需求文档
 > 版本：0.1
 > 日期：2026-11-17
 > 状态：可用于开发启动与多 Agent 任务分发
 > 项目根目录：`D:/obsidian_md/starwater-demo`
+> 远程仓库：`https://github.com/TheNorth7747/Hoshino-Realm-of-Watercolor`
 > 本文档是唯一需求基线；实现过程中如需变更，先记录变更，再修改代码。
 
 ---

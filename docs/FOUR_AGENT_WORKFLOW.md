@@ -1,10 +1,10 @@
-# 四 Agent 并行开发运行手册
+# Hoshino: Realm of Watercolor · 四 Agent 并行开发运行手册
 
-> 项目：《星野：水彩之境》
+> 项目：Hoshino: Realm of Watercolor（星野：水彩之境）
 > 项目根目录：`D:/obsidian_md/starwater-demo`
 > 需求基线：`docs/PRD.md`
 > 远程账号：`TheNorth7747`
-> 建议仓库：`https://github.com/TheNorth7747/starwater-demo`
+> 仓库地址：`https://github.com/TheNorth7747/Hoshino-Realm-of-Watercolor`
 > 本手册定义四个 Agent 的固定职责、用户操作顺序、Prompt、分支和集成规则。
 
 ---
@@ -71,7 +71,7 @@
 ### 4.2 Agent 1：A0 启动 Prompt
 
 ```text
-你是《星野：水彩之境》的 Agent 1，兼任架构与集成负责人。
+你是 Hoshino: Realm of Watercolor（星野：水彩之境）的 Agent 1，兼任架构与集成负责人。
 
 先完整阅读：
 1. D:/obsidian_md/starwater-demo/docs/PRD.md
