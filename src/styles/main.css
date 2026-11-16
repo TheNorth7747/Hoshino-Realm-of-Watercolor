@@ -1,0 +1,215 @@
+/**
+ * 基础样式（A0）。只定义“容器与调试/错误界面”，不定义 HUD、对话框等 A4 组件外观。
+ */
+
+:root {
+  color-scheme: light;
+  --paper: #f2ede4;
+  --ink: #2f2b26;
+  --ink-soft: #6b6257;
+  --line: rgba(47, 43, 38, 0.18);
+  --debug-bg: rgba(24, 22, 20, 0.82);
+  --debug-fg: #f4efe6;
+  --error-bg: rgba(28, 22, 20, 0.92);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family:
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.app__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+/* 覆盖层默认不拦截鼠标；A4 的交互元素自行设置 pointer-events: auto */
+.app__ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.app__debug {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 30;
+  max-width: 320px;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--debug-bg);
+  color: var(--debug-fg);
+  font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+}
+
+.debug-panel__title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+.debug-panel__list {
+  margin: 0;
+}
+
+.debug-panel__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.debug-panel__row dt {
+  opacity: 0.72;
+}
+
+.debug-panel__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-panel__extra:not(:empty) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.debug-panel__errors:not(:empty) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffb4a2;
+  white-space: pre-wrap;
+}
+
+.boot-status {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 240ms ease;
+}
+
+.boot-status[hidden] {
+  display: none;
+}
+
+.boot-status__title {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.boot-status__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.boot-status__hint--small {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.boot-status code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(47, 43, 38, 0.08);
+}
+
+.fatal-error {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--error-bg);
+}
+
+.fatal-error[hidden] {
+  display: none;
+}
+
+.fatal-error__card {
+  max-width: 720px;
+  width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  padding: 20px 22px;
+  border-radius: 12px;
+  background: #fbf7ef;
+  color: var(--ink);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+}
+
+.fatal-error__title {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.fatal-error__message,
+.fatal-error__stack {
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(47, 43, 38, 0.06);
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fatal-error__stack:empty {
+  display: none;
+}
+
+.fatal-error__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}

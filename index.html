@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>Hoshino: Realm of Watercolor</title>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <canvas id="game-canvas" class="app__canvas" aria-label="游戏画面"></canvas>
+
+      <!-- A4 的 HUD / 对话框 / 结局页挂载点；A0 保持为空。 -->
+      <div id="ui-root" class="app__ui" data-mount="ui"></div>
+
+      <!-- ?debug=1 时由 DebugOverlay 填充。 -->
+      <div id="debug-root" class="app__debug" data-mount="debug" hidden></div>
+
+      <div id="boot-status" class="boot-status">
+        <p class="boot-status__title">Hoshino: Realm of Watercolor</p>
+        <p class="boot-status__hint">M0 骨架 · 空场景加载中</p>
+        <p class="boot-status__hint boot-status__hint--small">
+          在地址后加 <code>?debug=1</code> 打开调试面板
+        </p>
+      </div>
+
+      <div id="fatal-error" class="fatal-error" role="alert" hidden>
+        <div class="fatal-error__card">
+          <h2 class="fatal-error__title">初始化失败</h2>
+          <pre class="fatal-error__message"></pre>
+          <pre class="fatal-error__stack"></pre>
+          <p class="fatal-error__hint">
+            请刷新页面重试；若持续失败，请确认浏览器支持 WebGL2 且已开启硬件加速。
+          </p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
