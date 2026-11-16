@@ -5,18 +5,18 @@
 
 ## 模块
 
-| 文件 | 职责 |
-|---|---|
-| `maskMapping.ts` | 世界 XZ ↔ 遮罩 UV/像素的唯一映射（u 沿 +X、v 沿 +Z，纹理 `flipY=false`） |
-| `MaskSurface.ts` | 绘制表面接口 + canvas 实现（reveal 层 / pulse 层 / 合成层、笔刷、覆盖率探针） |
-| `ColorRevealMask.ts` | 遮罩策略：玩家笔刷步进、30Hz 脏更新、bloom 扩张、reset、dispose |
-| `WatercolorMaterial.ts` | 共享 uniforms + 材质工厂 + shader 注入（世界坐标采样、线稿排线、纸纹） |
-| `WatercolorPass.ts` | 轻量纸张后期（EffectComposer + ShaderPass），可 install/uninstall |
-| `RevealSystem.ts` | GameSystem 挂载点（phase=`reveal`），事件接线、调试源、bench 生命周期 |
-| `RevealBench.ts` | 仅调试用的验证台（地面 + 3 个物体 + L 形行走器），A3 接入后应关闭 |
-| `RevealDebugView.ts` | `?debug=1` 的遮罩缩略图（含世界边界、节点触发圈、玩家点） |
-| `devHarness.ts` | dev server 专用验证入口（不进构建产物），Playwright 用它起真实渲染 |
-| `index.ts` | 公开出口 |
+| 文件                    | 职责                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `maskMapping.ts`        | 世界 XZ ↔ 遮罩 UV/像素的唯一映射（u 沿 +X、v 沿 +Z，纹理 `flipY=false`）      |
+| `MaskSurface.ts`        | 绘制表面接口 + canvas 实现（reveal 层 / pulse 层 / 合成层、笔刷、覆盖率探针） |
+| `ColorRevealMask.ts`    | 遮罩策略：玩家笔刷步进、30Hz 脏更新、bloom 扩张、reset、dispose               |
+| `WatercolorMaterial.ts` | 共享 uniforms + 材质工厂 + shader 注入（世界坐标采样、线稿排线、纸纹）        |
+| `WatercolorPass.ts`     | 轻量纸张后期（EffectComposer + ShaderPass），可 install/uninstall             |
+| `RevealSystem.ts`       | GameSystem 挂载点（phase=`reveal`），事件接线、调试源、bench 生命周期         |
+| `RevealBench.ts`        | 仅调试用的验证台（地面 + 3 个物体 + L 形行走器），A3 接入后应关闭             |
+| `RevealDebugView.ts`    | `?debug=1` 的遮罩缩略图（含世界边界、节点触发圈、玩家点）                     |
+| `devHarness.ts`         | dev server 专用验证入口（不进构建产物），Playwright 用它起真实渲染            |
+| `index.ts`              | 公开出口                                                                      |
 
 ## 集成（由集成者改 main.ts，A1 不动共享文件）
 
