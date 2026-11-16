@@ -12,6 +12,8 @@ import {
   toFatalErrorDetail,
 } from "./core/errors";
 import type { GameSystem, StarwaterBridge } from "./core/contracts";
+import { createPlayerSystems } from "./player";
+import { RevealSystem } from "./rendering";
 
 declare global {
   interface Window {
@@ -20,11 +22,15 @@ declare global {
 }
 
 /**
- * 模块挂载表。M0 为空：任何业务系统都不在这里提前接上。
- * 集成顺序：A1 rendering → A2 player → A3 world → A4 narrative/ui → A5 effects。
+ * 模块挂载表（集成者独占）。
+ * M1：A2 玩家/镜头 + A1 染色已接入。
+ * A3 场景、A4 故事/UI、A5 VFX 合入后在这里继续追加。
  */
 function createSystems(): GameSystem[] {
-  return [];
+  const { player, camera } = createPlayerSystems();
+  // RevealSystem 读取 playerSource 的玩家位置落笔；bench 只在 ?debug=1 下挂载
+  const reveal = new RevealSystem({ playerSource: player });
+  return [player, reveal, camera];
 }
 
 function requireElement<T extends Element>(selector: string): T {

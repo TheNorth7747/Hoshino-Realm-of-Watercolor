@@ -28,8 +28,8 @@ test("M0 smoke：空场景加载、渲染、无未处理异常", async ({ page }
   const snapshot = await page.evaluate(() => window.__STARWATER__?.game.getSnapshot() ?? null);
   expect(snapshot).not.toBeNull();
   expect(snapshot?.running).toBe(true);
-  // M0 不挂载任何业务系统：A1～A5 接入前这里必须为空。
-  expect(snapshot?.systems).toEqual([]);
+  // M1 集成后挂载表固定为 player / reveal / camera；多出或缺少系统都应让这里失败
+  expect(snapshot?.systems).toEqual(["player", "reveal", "camera"]);
   expect(snapshot?.errorCount).toBe(0);
 
   await expect(page.locator("#fatal-error")).toBeHidden();
