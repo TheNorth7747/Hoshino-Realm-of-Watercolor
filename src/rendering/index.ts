@@ -5,6 +5,7 @@
 export * from "./maskMapping";
 export * from "./MaskSurface";
 export * from "./ColorRevealMask";
+export * from "./FinaleReveal";
 export * from "./WatercolorMaterial";
 export * from "./WatercolorPass";
 export * from "./RevealBench";
