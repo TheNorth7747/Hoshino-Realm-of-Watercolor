@@ -6,7 +6,7 @@ import { PLAYER_MOVE_SPEED } from "../../src/player/PlayerController";
 import { applyKeyEvent } from "../../src/player/InputState";
 import { PLAYER_PLACEHOLDER_NAME } from "../../src/player/playerPlaceholder";
 import type { GameContext, PlayerSnapshot, PlayerSource } from "../../src/core/contracts";
-import { WORLD_BOUNDS } from "../../src/config/world";
+import { WORLD_BOUNDS, sampleTerrainHeight } from "../../src/config/world";
 import {
   createFakeGameContext,
   hillyTerrain,
@@ -46,7 +46,8 @@ describe("PlayerController · 快照契约（core/contracts 8.2）", () => {
     const { player } = createPlayer();
     const snapshot: PlayerSnapshot = player.getPlayerSnapshot();
     expect(snapshot.position.x).toBe(0);
-    expect(snapshot.position.y).toBe(0);
+    // 出生点 Y 来自共享地形采样器（A3 接入后不再是 0），不在这里写死高度
+    expect(snapshot.position.y).toBeCloseTo(sampleTerrainHeight(0, 32), 6);
     expect(snapshot.position.z).toBe(32);
     expect(snapshot.headingRadians).toBeCloseTo(Math.PI, 6);
     expect(snapshot.speed).toBe(0);

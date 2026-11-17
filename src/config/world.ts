@@ -11,9 +11,9 @@ import type {
   LandmarkDefinition,
   LandmarkId,
   StoryNodeId,
-  TerrainHeightSampler,
   WorldBounds,
 } from "../core/contracts";
+import { sampleTerrainHeight } from "../world/terrainHeight";
 
 /** 1 单位 = 1 米（PRD 5.3）。 */
 export const WORLD_UNIT_METERS = 1;
@@ -30,10 +30,15 @@ export const WORLD_SIZE_X = WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX;
 export const WORLD_SIZE_Z = WORLD_BOUNDS.maxZ - WORLD_BOUNDS.minZ;
 
 /**
- * A0 占位地形：完全平坦。
- * A3 替换为缓起伏地形时保持签名 `(x, z) => 高度`，A2 的贴地与 A4 的触发都无需改动。
+ * 地形高度：唯一实现。
+ * A0 的平坦占位已被 A3 的 `src/world/terrainHeight.ts` 取代（缓起伏 + 蓝花坡 + 溪流河槽 + 踏石）。
+ * 用 re-export 而不是复制：全项目只有一套高度函数，玩家贴地 / 镜头避让 / 出生点 / 触发判定
+ * 都读同一个采样器（PRD 5.3 / 7.2）。
+ *
+ * 循环引用安全：terrainHeight 只在函数体内读取本文件的 LANDMARKS / STREAM，
+ * 不在模块顶层取值，因此 config → world → config 的环不会触发 TDZ。
  */
-export const sampleTerrainHeight: TerrainHeightSampler = (_x: number, _z: number): number => 0;
+export { sampleTerrainHeight };
 
 /** 主路线沿负 Z 推进（PRD 5.3）。 */
 export const MAIN_ROUTE_DIRECTION = new Vector3(0, 0, -1);

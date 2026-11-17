@@ -17,7 +17,7 @@ import type {
   WorldBounds,
 } from "../../../src/core/contracts";
 import { EventBus } from "../../../src/core/EventBus";
-import { WORLD_BOUNDS } from "../../../src/config/world";
+import { WORLD_BOUNDS, sampleTerrainHeight } from "../../../src/config/world";
 
 export function createFakeSettings(
   overrides: Partial<EngineSettings> = {},
@@ -80,7 +80,7 @@ export class FakeDebug implements DebugApi {
 }
 
 export interface FakeContextOptions {
-  /** 测试地形高度采样；默认平坦 y=0。 */
+  /** 测试地形高度采样；默认与真实世界同一个采样器（A3 接入后不再是平坦 y=0）。 */
   readonly sampleHeight?: (x: number, z: number) => number;
   /** 测试世界边界；默认 config/world.ts 的 WORLD_BOUNDS。 */
   readonly bounds?: WorldBounds;
@@ -98,7 +98,7 @@ export function createFakeGameContext(options: FakeContextOptions = {}): GameCon
     settings: createFakeSettings(options.settings),
     world: {
       bounds: options.bounds ?? WORLD_BOUNDS,
-      sampleHeight: options.sampleHeight ?? (() => 0),
+      sampleHeight: options.sampleHeight ?? sampleTerrainHeight,
     },
     uiRoot: {} as HTMLElement,
     worldRoot: new Group(),

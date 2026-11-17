@@ -14,6 +14,7 @@ import {
 import type { GameSystem, StarwaterBridge } from "./core/contracts";
 import { createPlayerSystems } from "./player";
 import { RevealSystem } from "./rendering";
+import { createWorldSystem } from "./world";
 
 declare global {
   interface Window {
@@ -21,16 +22,35 @@ declare global {
   }
 }
 
+interface SystemsBuild {
+  readonly systems: readonly GameSystem[];
+  /**
+   * 世界碰撞体在 WorldSystem.init() 里才构建，而 init 发生在 Game.start() 内部，
+   * 所以必须等 start 之后再接入，否则玩家拿到的是空碰撞表（A3 示例里的顺序是错的）。
+   */
+  attachColliders(): void;
+}
+
 /**
  * 模块挂载表（集成者独占）。
- * M1：A2 玩家/镜头 + A1 染色已接入。
- * A3 场景、A4 故事/UI、A5 VFX 合入后在这里继续追加。
+ * M2：A3 场景 + A2 玩家/镜头 + A1 染色。A4 故事/UI、A5 VFX 合入后继续追加。
  */
-function createSystems(): GameSystem[] {
+function createSystems(): SystemsBuild {
   const { player, camera } = createPlayerSystems();
-  // RevealSystem 读取 playerSource 的玩家位置落笔；bench 只在 ?debug=1 下挂载
-  const reveal = new RevealSystem({ playerSource: player });
-  return [player, reveal, camera];
+  // M2 起用真实场景，关掉 A1 的调试验证台
+  const reveal = new RevealSystem({ playerSource: player, enableBench: false });
+  const world = createWorldSystem({
+    revealUniformsProvider: () => reveal.revealUniforms,
+  });
+
+  return {
+    // 注册顺序：player → reveal → world → camera（world 与 reveal 同为 reveal 阶段，
+    // 稳定排序保证世界的水彩材质绑定发生在 RevealSystem 更新之后、渲染之前）
+    systems: [player, reveal, world, camera],
+    attachColliders(): void {
+      player.addColliders(world.getColliders());
+    },
+  };
 }
 
 function requireElement<T extends Element>(selector: string): T {
@@ -53,16 +73,18 @@ function bootstrap(): void {
   const uiRoot = requireElement<HTMLElement>("#ui-root");
   const debugContainer = document.querySelector<HTMLElement>("#debug-root");
 
+  const build = createSystems();
   const game = new Game({
     canvas,
     uiRoot,
     debugContainer,
     search: window.location.search,
-    systems: createSystems(),
+    systems: [...build.systems],
   });
 
   window.__STARWATER__ = { version: APP_VERSION, game };
   game.start();
+  build.attachColliders();
 
   // 等第一帧真正画出来再撤掉启动提示，避免闪一下空白。
   requestAnimationFrame(() => {

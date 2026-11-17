@@ -91,7 +91,7 @@ test("M1-1：角色可以移动和转向", async ({ page }) => {
   await boot(page);
   const before = await readState(page);
   expect(before.position).not.toBeNull();
-  expect(before.systems).toEqual(["player", "reveal", "camera"]);
+  expect(before.systems).toEqual(["player", "reveal", "world", "camera"]);
 
   await holdKey(page, "KeyW", 900);
   const afterW = await readState(page);
@@ -201,10 +201,11 @@ test("M1-4：至少两种物体与地面使用同一遮罩", async ({ page }) =>
   });
 
   expect(shared.hasUniforms).toBe(true);
-  expect(shared.found.length).toBeGreaterThanOrEqual(3); // 地面 + 球 + 柱 + 方块
+  expect(shared.found.length).toBeGreaterThanOrEqual(3); // 地面 + 水 + 树 + 草 + 花 + 山
   expect(shared.found.every((entry) => entry.shares)).toBe(true);
+  // M2 起场景来自 A3：地形、溪水、花树必须共用同一份 uniforms（AC-05）
   expect(shared.found.map((entry) => entry.name)).toEqual(
-    expect.arrayContaining(["bench-ground", "bench-sphere", "bench-tree"]),
+    expect.arrayContaining(["terrain-mesh", "stream-water", "flower-tree-trunk"]),
   );
 
   // 同一遮罩也在被真实绘制：玩家走过的位置显色 > 0.5
@@ -218,6 +219,6 @@ test("M1-5：调试面板显示系统列表与染色统计", async ({ page }) =>
   const debugRoot = page.locator("#debug-root");
   await expect(debugRoot).toBeVisible();
   await expect(debugRoot).toContainText("已挂载系统");
-  await expect(debugRoot).toContainText("player, reveal, camera");
+  await expect(debugRoot).toContainText("player, reveal, world, camera");
   await expect(debugRoot).toContainText("reveal.coverage");
 });
