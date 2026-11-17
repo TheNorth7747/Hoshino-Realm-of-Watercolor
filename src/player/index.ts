@@ -49,6 +49,9 @@ export {
   CAMERA_DRAG_SENSITIVITY,
   CAMERA_WHEEL_STEP,
   CAMERA_TERRAIN_CLEARANCE,
+  CAMERA_FINALE_DISTANCE,
+  CAMERA_FINALE_PITCH,
+  CAMERA_FINALE_RATE,
   type CameraRigOptions,
 } from "./CameraRig";
 export { createPlayerPlaceholderMesh, PLAYER_PLACEHOLDER_NAME } from "./playerPlaceholder";

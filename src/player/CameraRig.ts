@@ -7,6 +7,12 @@
  * - 滚轮缩放：目标距离乘性缩放并钳制到 [min, max]，距离平滑过渡。
  * - 基础地形避让：镜头 XZ 处采样地形高度，保证高于地面 clearance
  *   （PRD 9.3“摄像机做基础地形避让”；树木遮挡淡化属于 P1）。
+ * - 结局运镜（PRD 5.5 / P0“花树开花后镜头短暂拉远”）：
+ *   监听 `story:completed({ nodeId: "tree" })` 立即开始（早于 `game:finished`，
+ *   后者在结局 UI 出现时才触发）。保持当前 yaw，用同一套指数阻尼把距离平滑
+ *   拉到 CAMERA_FINALE_DISTANCE、俯角抬到 CAMERA_FINALE_PITCH，让花树、玩家
+ *   与染色路径尽量留在画面里；运镜期间丢弃滚轮/拖拽增量，避免输入与动画争夺；
+ *   `game:reset` 清除运镜并恢复默认距离、俯角与输入。
  * - delta 截断与 game:reset 复位（回到出生点朝向主路线）。
  *
  * 玩家位置通过共享契约 PlayerSource 读取（core/contracts.ts 8.2），
@@ -33,6 +39,14 @@ export const CAMERA_WHEEL_STEP = 0.0015;
 /** 跟随点与距离的阻尼速率（1/s）。 */
 export const CAMERA_FOLLOW_RATE = 8;
 export const CAMERA_ZOOM_RATE = 8;
+/** 结局运镜：目标距离（米）与俯角（弧度）。距离仍在上限内，俯角适度提高。 */
+export const CAMERA_FINALE_DISTANCE = 13;
+export const CAMERA_FINALE_PITCH = 0.62;
+/**
+ * 结局运镜阻尼速率（1/s）。刻意比常规缩放慢：指数阻尼的时间常数约 1/rate，
+ * 2.2 对应 ~0.45s 时间常数、约 1.5s 视觉完成，首帧步进 <0.2m，无硬切感。
+ */
+export const CAMERA_FINALE_RATE = 2.2;
 /** 跟随点在玩家脚底坐标之上的高度（角色约 1.4m 高）。 */
 export const CAMERA_HEAD_OFFSET = 1.5;
 /** 镜头与地面的最小间距（米）。 */
@@ -64,6 +78,12 @@ export class CameraRig implements GameSystem {
   private currentDistance: number;
   private readonly followPoint = new Vector3Impl();
 
+  /** 结局运镜状态：触发后保持 true，直到 game:reset 清除。 */
+  private finaleActive = false;
+  /** 运镜的目标距离/俯角，触发时按当时状态快照，供阻尼逼近。 */
+  private finaleTargetDistance = CAMERA_FINALE_DISTANCE;
+  private finaleTargetPitch = CAMERA_FINALE_PITCH;
+
   private readonly unsubscribeFns: Array<() => void> = [];
   private readonly tmpDesired = new Vector3Impl();
 
@@ -84,6 +104,8 @@ export class CameraRig implements GameSystem {
 
     this.unsubscribeFns.push(
       context.events.on("game:reset", () => this.resetToSpawn(context)),
+      // 结局运镜：花树节点完成即刻开始，不等 game:finished（那是结局 UI 触发点）。
+      context.events.on("story:completed", (payload) => this.handleStoryCompleted(payload.nodeId)),
       context.debug.registerStatSource(this.createStatSource()),
     );
   }
@@ -91,28 +113,35 @@ export class CameraRig implements GameSystem {
   update(deltaSeconds: number, context: GameContext): void {
     const step = clampDelta(deltaSeconds, context.settings.maxDeltaSeconds);
 
-    // 拖拽旋转：右拖 → 视线右转（yaw 减小），下拖 → 镜头升高俯角增大。
-    const mouse = this.input.consumeMouseDelta();
-    if (mouse.x !== 0 || mouse.y !== 0) {
-      const dx = clampMagnitude(mouse.x, MAX_MOUSE_DELTA_PER_FRAME);
-      const dy = clampMagnitude(mouse.y, MAX_MOUSE_DELTA_PER_FRAME);
-      this.yaw -= dx * CAMERA_DRAG_SENSITIVITY;
-      this.pitch += dy * CAMERA_DRAG_SENSITIVITY;
-      this.pitch = Math.min(CAMERA_MAX_PITCH, Math.max(CAMERA_MIN_PITCH, this.pitch));
-    }
+    if (this.finaleActive) {
+      // 运镜期间输入隔离：照常消费增量，但丢弃，避免残留增量在运镜结束后突然生效。
+      this.input.consumeMouseDelta();
+      this.input.consumeWheelDelta();
+      this.updateFinale(step);
+    } else {
+      // 拖拽旋转：右拖 → 视线右转（yaw 减小），下拖 → 镜头升高俯角增大。
+      const mouse = this.input.consumeMouseDelta();
+      if (mouse.x !== 0 || mouse.y !== 0) {
+        const dx = clampMagnitude(mouse.x, MAX_MOUSE_DELTA_PER_FRAME);
+        const dy = clampMagnitude(mouse.y, MAX_MOUSE_DELTA_PER_FRAME);
+        this.yaw -= dx * CAMERA_DRAG_SENSITIVITY;
+        this.pitch += dy * CAMERA_DRAG_SENSITIVITY;
+        this.pitch = Math.min(CAMERA_MAX_PITCH, Math.max(CAMERA_MIN_PITCH, this.pitch));
+      }
 
-    // 滚轮缩放：向下滚 → 拉远；目标距离钳制，实际距离平滑追踪。
-    const wheel = this.input.consumeWheelDelta();
-    if (wheel !== 0) {
-      const clampedWheel = clampMagnitude(wheel, MAX_WHEEL_DELTA_PER_FRAME);
-      this.targetDistance *= Math.exp(clampedWheel * CAMERA_WHEEL_STEP);
-      this.targetDistance = Math.min(
-        CAMERA_MAX_DISTANCE,
-        Math.max(CAMERA_MIN_DISTANCE, this.targetDistance),
-      );
+      // 滚轮缩放：向下滚 → 拉远；目标距离钳制，实际距离平滑追踪。
+      const wheel = this.input.consumeWheelDelta();
+      if (wheel !== 0) {
+        const clampedWheel = clampMagnitude(wheel, MAX_WHEEL_DELTA_PER_FRAME);
+        this.targetDistance *= Math.exp(clampedWheel * CAMERA_WHEEL_STEP);
+        this.targetDistance = Math.min(
+          CAMERA_MAX_DISTANCE,
+          Math.max(CAMERA_MIN_DISTANCE, this.targetDistance),
+        );
+      }
+      const zoomBlend = 1 - Math.exp(-CAMERA_ZOOM_RATE * step);
+      this.currentDistance += (this.targetDistance - this.currentDistance) * zoomBlend;
     }
-    const zoomBlend = 1 - Math.exp(-CAMERA_ZOOM_RATE * step);
-    this.currentDistance += (this.targetDistance - this.currentDistance) * zoomBlend;
 
     // 跟随点阻尼追踪玩家头部位置。
     const playerPosition = this.playerSource.getPlayerSnapshot().position;
@@ -126,6 +155,8 @@ export class CameraRig implements GameSystem {
   dispose(): void {
     for (const unsubscribe of this.unsubscribeFns) unsubscribe();
     this.unsubscribeFns.length = 0;
+    // 系统销毁后不再处于运镜态，避免被复用时残留状态（dispose 后 getter 应报默认值语义）。
+    this.clearFinale();
   }
 
   // ---- 调试 / 测试读取 ----
@@ -142,8 +173,61 @@ export class CameraRig implements GameSystem {
     return this.currentDistance;
   }
 
+  /** 滚轮缩放的目标距离（调试与测试用）。 */
+  getTargetDistance(): number {
+    return this.targetDistance;
+  }
+
   getFollowPoint(): Vector3 {
     return this.followPoint;
+  }
+
+  /** 是否处于结局运镜中（调试与测试用）。 */
+  isFinaleActive(): boolean {
+    return this.finaleActive;
+  }
+
+  /** 结局运镜的目标距离（调试与测试用）。 */
+  getFinaleTargetDistance(): number {
+    return this.finaleTargetDistance;
+  }
+
+  /** 结局运镜的目标俯角（调试与测试用）。 */
+  getFinaleTargetPitch(): number {
+    return this.finaleTargetPitch;
+  }
+
+  // ---- 结局运镜 ----
+
+  /**
+   * 仅响应花树节点：`story:completed({ nodeId: "tree" })`。
+   * 记录当前 yaw 后不动，锁定目标距离/俯角，交给 update 的同一套指数阻尼推进。
+   * 幂等：重复事件不会重设进度（不会把镜头拉回起点）。
+   */
+  private handleStoryCompleted(nodeId: string): void {
+    if (nodeId !== "tree" || this.finaleActive) return;
+    this.finaleActive = true;
+    this.finaleTargetDistance = CAMERA_FINALE_DISTANCE;
+    this.finaleTargetPitch = CAMERA_FINALE_PITCH;
+    // 运镜接管镜头后清空可能残留的输入增量，避免运镜结束瞬间被旧增量顶一下。
+    this.input.handleWindowBlur();
+  }
+
+  /** 阻尼推进运镜（复用其他距离/角度同构的指数阻尼，无计时器硬切）。 */
+  private updateFinale(step: number): void {
+    const blend = 1 - Math.exp(-CAMERA_FINALE_RATE * step);
+    this.currentDistance += (this.finaleTargetDistance - this.currentDistance) * blend;
+    // 距离与俯角同步逼近；目标值由常量给出，yaw 全程保持不变（保留朝向）。
+    this.pitch += (this.finaleTargetPitch - this.pitch) * blend;
+    // 同步常规缩放目标，运镜结束/重置后不会回弹到旧值。
+    this.targetDistance = this.currentDistance;
+  }
+
+  /** 清除运镜状态（reset / dispose 共用）。 */
+  private clearFinale(): void {
+    this.finaleActive = false;
+    this.finaleTargetDistance = CAMERA_FINALE_DISTANCE;
+    this.finaleTargetPitch = CAMERA_FINALE_PITCH;
   }
 
   /** 立即把镜头摆到理想位（init / reset 用，避免开场或重置时镜头飞入）。 */
@@ -155,10 +239,14 @@ export class CameraRig implements GameSystem {
   }
 
   private resetToSpawn(context: GameContext): void {
+    // 结束结局运镜，恢复默认距离/俯角与可用输入（PRD P0 reset 要求）。
+    this.clearFinale();
     this.yaw = 0;
     this.pitch = this.defaultPitch;
     this.targetDistance = this.defaultDistance;
+    // clearKeys 清空方向键；拖拽/滚轮增量由 handleWindowBlur 一并丢弃。
     this.input.clearKeys();
+    this.input.handleWindowBlur();
     // 强制 lerp 收敛：直接置为玩家当前位置再快照。
     this.snapToTarget(context);
   }
@@ -192,6 +280,7 @@ export class CameraRig implements GameSystem {
         cameraYaw: Number(this.yaw.toFixed(4)),
         cameraPitch: Number(this.pitch.toFixed(4)),
         cameraDistance: Number(this.currentDistance.toFixed(4)),
+        cameraFinale: this.finaleActive,
       }),
     };
   }
