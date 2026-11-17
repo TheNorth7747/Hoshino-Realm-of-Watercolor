@@ -17,7 +17,12 @@ import { InputState } from "./InputState";
 import { PlayerController } from "./PlayerController";
 import { CameraRig } from "./CameraRig";
 
-export { InputState, DEFAULT_KEY_BINDINGS, applyKeyEvent, shouldPreventDefault } from "./InputState";
+export {
+  InputState,
+  DEFAULT_KEY_BINDINGS,
+  applyKeyEvent,
+  shouldPreventDefault,
+} from "./InputState";
 export type { InputAction, MoveAxes, MouseDelta } from "./InputState";
 export { DomInputBinder } from "./DomInputBinder";
 export {
@@ -55,10 +60,12 @@ export interface PlayerSystems {
 }
 
 /** 构造共享输入的玩家 + 镜头系统对。 */
-export function createPlayerSystems(options: {
-  readonly player?: { readonly moveSpeed?: number; readonly sprintSpeed?: number };
-  readonly camera?: { readonly distance?: number; readonly pitch?: number };
-} = {}): PlayerSystems {
+export function createPlayerSystems(
+  options: {
+    readonly player?: { readonly moveSpeed?: number; readonly sprintSpeed?: number };
+    readonly camera?: { readonly distance?: number; readonly pitch?: number };
+  } = {},
+): PlayerSystems {
   const input = new InputState();
   const player = new PlayerController({
     input,

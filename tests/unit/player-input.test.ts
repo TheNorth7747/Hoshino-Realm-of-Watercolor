@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  InputState,
-  applyKeyEvent,
-  shouldPreventDefault,
-} from "../../src/player/InputState";
+import { InputState, applyKeyEvent, shouldPreventDefault } from "../../src/player/InputState";
 
 function pressKeys(state: InputState, codes: string[]): void {
   for (const code of codes) applyKeyEvent(state, code, true);

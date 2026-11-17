@@ -100,7 +100,19 @@ test("M2：主路线走通，不卡在溪流，无软锁", async ({ page }, test
   expect(snapshot?.drawCalls ?? 0).toBeGreaterThan(0);
   expect(snapshot?.drawCalls ?? 0).toBeLessThanOrEqual(180);
   expect(snapshot?.triangles ?? 0).toBeLessThanOrEqual(350_000);
-  expect(snapshot?.systems).toEqual(["player", "companion", "story", "ui-hud", "ui-dialogue", "ui-ending", "ui-debug", "reveal", "world", "effects-vfx", "camera"]);
+  expect(snapshot?.systems).toEqual([
+    "player",
+    "companion",
+    "story",
+    "ui-hud",
+    "ui-dialogue",
+    "ui-ending",
+    "ui-debug",
+    "reveal",
+    "world",
+    "effects-vfx",
+    "camera",
+  ]);
 
   await testInfo.attach("m2-route-end", {
     body: await page.screenshot({ path: testInfo.outputPath("m2-route-end.png") }),

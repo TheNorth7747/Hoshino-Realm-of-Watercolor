@@ -19,9 +19,7 @@ import type {
 import { EventBus } from "../../../src/core/EventBus";
 import { WORLD_BOUNDS, sampleTerrainHeight } from "../../../src/config/world";
 
-export function createFakeSettings(
-  overrides: Partial<EngineSettings> = {},
-): EngineSettings {
+export function createFakeSettings(overrides: Partial<EngineSettings> = {}): EngineSettings {
   return {
     appName: "Hoshino: Realm of Watercolor",
     maxDeltaSeconds: 0.05,

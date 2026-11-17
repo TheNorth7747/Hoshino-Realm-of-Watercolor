@@ -34,8 +34,7 @@ async function maskCoverage(page: Page): Promise<number> {
   return page.evaluate(() => {
     const bridge = window.__STARWATER__;
     const reveal = bridge?.game.getSystem("reveal") as unknown as
-      | { colorRevealMask: { surface: { readRevealCoverage(): number } } | null }
-      | undefined;
+      { colorRevealMask: { surface: { readRevealCoverage(): number } } | null } | undefined;
     return reveal?.colorRevealMask?.surface.readRevealCoverage() ?? -1;
   });
 }

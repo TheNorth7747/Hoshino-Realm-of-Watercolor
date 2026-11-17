@@ -2,16 +2,8 @@ import { describe, expect, it } from "vitest";
 import { Vector3 } from "three";
 import { CameraRig } from "../../src/player/CameraRig";
 import { InputState } from "../../src/player/InputState";
-import type {
-  GameContext,
-  PlayerSnapshot,
-  PlayerSource,
-} from "../../src/core/contracts";
-import {
-  createFakeGameContext,
-  hillyTerrain,
-  runFrames,
-} from "./helpers/fake-game-context";
+import type { GameContext, PlayerSnapshot, PlayerSource } from "../../src/core/contracts";
+import { createFakeGameContext, hillyTerrain, runFrames } from "./helpers/fake-game-context";
 
 /** 可控玩家替身：实现共享契约 PlayerSource。 */
 class FakePlayer implements PlayerSource {

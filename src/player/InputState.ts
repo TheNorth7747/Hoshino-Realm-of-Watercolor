@@ -25,13 +25,7 @@ export const DEFAULT_KEY_BINDINGS: Readonly<Record<string, InputAction>> = Objec
 });
 
 /** 需要阻止浏览器默认行为（页面滚动）的游戏按键。 */
-const PREVENT_DEFAULT_CODES = new Set([
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
-  "Space",
-]);
+const PREVENT_DEFAULT_CODES = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]);
 
 export interface MoveAxes {
   /** 右为正（D=+1，A=-1）。 */

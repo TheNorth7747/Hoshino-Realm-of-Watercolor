@@ -6,13 +6,7 @@
  * - 散布用确定性种子，场景可复现（单元测试与验收截图稳定）。
  * - 高度一律来自 terrainHeight 采样，保证贴地。
  */
-import {
-  ConeGeometry,
-  Group,
-  IcosahedronGeometry,
-  InstancedMesh,
-  Object3D,
-} from "three";
+import { ConeGeometry, Group, IcosahedronGeometry, InstancedMesh, Object3D } from "three";
 import { LANDMARKS, STREAM } from "../config/world";
 import { sampleTerrainHeight, steppingStonePositions } from "./terrainHeight";
 import {
@@ -64,7 +58,11 @@ export function buildVegetationGroup(materials: MaterialAccessor): WorldMeshBuil
     const scale = uniformRange(random, 0.7, 1.5);
     dummy.position.set(x, sampleTerrainHeight(x, z) - 0.03, z);
     dummy.scale.set(1, scale, 1);
-    dummy.rotation.set(uniformRange(random, -0.12, 0.12), uniformRange(random, 0, Math.PI * 2), uniformRange(random, -0.12, 0.12));
+    dummy.rotation.set(
+      uniformRange(random, -0.12, 0.12),
+      uniformRange(random, 0, Math.PI * 2),
+      uniformRange(random, -0.12, 0.12),
+    );
     dummy.updateMatrix();
     grass.setMatrixAt(placedGrass, dummy.matrix);
     placedGrass += 1;
@@ -102,7 +100,11 @@ export function buildVegetationGroup(materials: MaterialAccessor): WorldMeshBuil
     stems.setMatrixAt(placedFlowers, dummy.matrix);
     // 花头略微偏移出茎顶，随机倾倒模拟自然生长。
     dummy.position.set(x, y + 0.24 * scale, z);
-    dummy.rotation.set(uniformRange(random, -0.35, 0.35), uniformRange(random, 0, Math.PI * 2), uniformRange(random, -0.35, 0.35));
+    dummy.rotation.set(
+      uniformRange(random, -0.35, 0.35),
+      uniformRange(random, 0, Math.PI * 2),
+      uniformRange(random, -0.35, 0.35),
+    );
     dummy.updateMatrix();
     blooms.setMatrixAt(placedFlowers, dummy.matrix);
     placedFlowers += 1;

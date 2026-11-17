@@ -63,7 +63,9 @@ describe("A3 × A2 联测 · 主路线走通（M2 代理）", () => {
       for (const collider of colliders) {
         const dist = Math.hypot(p.x - collider.x, p.z - collider.z);
         if (dist < collider.radius + 0.4 - 1e-6) {
-          violations.push(`frame ${frame}: 进入碰撞体 (${collider.x}, ${collider.z}) r=${collider.radius}`);
+          violations.push(
+            `frame ${frame}: 进入碰撞体 (${collider.x}, ${collider.z}) r=${collider.radius}`,
+          );
         }
       }
       // 镜头避让：镜头始终高于地形（PRD 9.3）

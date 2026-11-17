@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { InstancedMesh, MeshStandardMaterial, Texture, type BufferAttribute, type Mesh } from "three";
+import {
+  InstancedMesh,
+  MeshStandardMaterial,
+  Texture,
+  type BufferAttribute,
+  type Mesh,
+} from "three";
 import { LANDMARKS, STREAM, WORLD_BOUNDS } from "../../../src/config/world";
 import { createRevealUniforms, getRevealUniforms } from "../../../src/rendering/WatercolorMaterial";
 import {
@@ -96,8 +102,12 @@ describe("WorldSystem · 场景构建", () => {
 
     expect(world.getTriangles()).toBeLessThan(100_000); // PRD 上限 350k，实测约 45k
     // 实例 = 草 720 + 花茎 150 + 花头 150 + 远山 ≤9
-    expect(world.getInstances()).toBeGreaterThanOrEqual(GRASS_INSTANCE_COUNT + FLOWER_INSTANCE_COUNT * 2);
-    expect(world.getInstances()).toBeLessThan(GRASS_INSTANCE_COUNT + FLOWER_INSTANCE_COUNT * 2 + 20);
+    expect(world.getInstances()).toBeGreaterThanOrEqual(
+      GRASS_INSTANCE_COUNT + FLOWER_INSTANCE_COUNT * 2,
+    );
+    expect(world.getInstances()).toBeLessThan(
+      GRASS_INSTANCE_COUNT + FLOWER_INSTANCE_COUNT * 2 + 20,
+    );
     world.dispose();
   });
 
@@ -168,9 +178,7 @@ describe("WorldSystem · 碰撞数据（PRD 9.3 圆形碰撞）", () => {
     world.init(context);
 
     const colliders = world.getColliders();
-    const trunk = colliders.find(
-      (c) => c.x === LANDMARKS.tree.x && c.z === LANDMARKS.tree.z,
-    );
+    const trunk = colliders.find((c) => c.x === LANDMARKS.tree.x && c.z === LANDMARKS.tree.z);
     expect(trunk).toBeDefined();
     expect(trunk?.radius).toBe(TREE_TRUNK_COLLIDER_RADIUS);
     world.dispose();

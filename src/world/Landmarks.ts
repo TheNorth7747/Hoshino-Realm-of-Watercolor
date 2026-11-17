@@ -12,12 +12,7 @@
  * `steppingStonePositions()`（由 config 的 STREAM 数量/间距推导），这里只负责
  * 在其上摆石块几何体；高度取自地形采样，因此石块顶面与可通过的河槽凸起一致。
  */
-import {
-  CylinderGeometry,
-  Group,
-  IcosahedronGeometry,
-  Mesh,
-} from "three";
+import { CylinderGeometry, Group, IcosahedronGeometry, Mesh } from "three";
 import { LANDMARKS } from "../config/world";
 import type { CollisionCircle } from "../player/collision";
 import { sampleTerrainHeight, steppingStonePositions } from "./terrainHeight";
@@ -149,7 +144,10 @@ export function buildLandmarkGroup(materials: MaterialAccessor): LandmarkBuildRe
     const x = landmark.x + offset.dx;
     const z = landmark.z + offset.dz;
     const y = sampleTerrainHeight(x, z);
-    const rock = new Mesh(new IcosahedronGeometry(uniformRange(random, 0.45, 0.7), 0), materials("rock"));
+    const rock = new Mesh(
+      new IcosahedronGeometry(uniformRange(random, 0.45, 0.7), 0),
+      materials("rock"),
+    );
     rock.name = `rock-${index}`;
     tagWorldMaterialKind(rock, "rock");
     rock.position.set(x, y + 0.12, z);

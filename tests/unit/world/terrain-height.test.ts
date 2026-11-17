@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  LANDMARKS,
-  STREAM,
-  WORLD_BOUNDS,
-} from "../../../src/config/world";
+import { LANDMARKS, STREAM, WORLD_BOUNDS } from "../../../src/config/world";
 import {
   STREAM_WATER_LEVEL,
   sampleTerrainHeight,

@@ -91,7 +91,19 @@ test("M1-1：角色可以移动和转向", async ({ page }) => {
   await boot(page);
   const before = await readState(page);
   expect(before.position).not.toBeNull();
-  expect(before.systems).toEqual(["player", "companion", "story", "ui-hud", "ui-dialogue", "ui-ending", "ui-debug", "reveal", "world", "effects-vfx", "camera"]);
+  expect(before.systems).toEqual([
+    "player",
+    "companion",
+    "story",
+    "ui-hud",
+    "ui-dialogue",
+    "ui-ending",
+    "ui-debug",
+    "reveal",
+    "world",
+    "effects-vfx",
+    "camera",
+  ]);
 
   await holdKey(page, "KeyW", 900);
   const afterW = await readState(page);

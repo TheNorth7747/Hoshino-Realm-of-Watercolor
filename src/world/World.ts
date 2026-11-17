@@ -17,25 +17,21 @@
  * phase 选择：世界无逐帧逻辑（首帧绑定后 no-op），取 "reveal" 并在集成顺序中
  * 排在 RevealSystem 之后，保证绑定发生在 reveal 更新之后的同一帧渲染前。
  */
-import { MeshStandardMaterial, type Group, type InstancedMesh, type Material, type Mesh } from "three";
-import type {
-  DebugStatSource,
-  GameContext,
-  GameSystem,
-  SystemPhase,
-} from "../core/contracts";
-import { disposeMaterial, disposeObject3D } from "../core/dispose";
 import {
-  createWatercolorMaterial,
-  type RevealUniforms,
-} from "../rendering/WatercolorMaterial";
+  MeshStandardMaterial,
+  type Group,
+  type InstancedMesh,
+  type Material,
+  type Mesh,
+} from "three";
+import type { DebugStatSource, GameContext, GameSystem, SystemPhase } from "../core/contracts";
+import { disposeMaterial, disposeObject3D } from "../core/dispose";
+import { createWatercolorMaterial, type RevealUniforms } from "../rendering/WatercolorMaterial";
 import type { CollisionCircle } from "../player/collision";
 import { buildTerrainGroup } from "./Terrain";
 import { buildVegetationGroup } from "./Vegetation";
 import { buildLandmarkGroup } from "./Landmarks";
-import {
-  STREAM_WATER_LEVEL,
-} from "./terrainHeight";
+import { STREAM_WATER_LEVEL } from "./terrainHeight";
 import {
   WORLD_MATERIAL_APPEARANCE,
   WORLD_MATERIAL_KINDS,
@@ -75,7 +71,8 @@ export class WorldSystem implements GameSystem {
     const vegetationBuild = buildVegetationGroup(accessor);
     const landmarkBuild = buildLandmarkGroup(accessor);
 
-    this.triangleCount = terrainBuild.triangleCount + vegetationBuild.triangleCount + landmarkBuild.triangleCount;
+    this.triangleCount =
+      terrainBuild.triangleCount + vegetationBuild.triangleCount + landmarkBuild.triangleCount;
     this.colliders = landmarkBuild.colliders;
 
     this.topGroups.push(terrainBuild.group, vegetationBuild.group, landmarkBuild.group);

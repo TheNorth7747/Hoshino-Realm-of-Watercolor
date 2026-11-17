@@ -50,10 +50,7 @@ export function geometryTriangleCount(geometry: BufferGeometry): number {
 }
 
 /** 标记网格的材质种类，WorldSystem 据此做染色材质替换。三个构建文件共用。 */
-export function tagWorldMaterialKind(
-  mesh: Mesh | InstancedMesh,
-  kind: WorldMaterialKind,
-): void {
+export function tagWorldMaterialKind(mesh: Mesh | InstancedMesh, kind: WorldMaterialKind): void {
   mesh.userData["worldMaterialKind"] = kind;
 }
 

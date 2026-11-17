@@ -14,12 +14,7 @@
  */
 import type { Vector3 } from "three";
 import { Vector3 as Vector3Impl } from "three";
-import type {
-  DebugStatSource,
-  GameContext,
-  GameSystem,
-  PlayerSource,
-} from "../core/contracts";
+import type { DebugStatSource, GameContext, GameSystem, PlayerSource } from "../core/contracts";
 import { clampDelta } from "../core/config";
 import type { InputState } from "./InputState";
 

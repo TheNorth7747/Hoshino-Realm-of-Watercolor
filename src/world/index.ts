@@ -34,7 +34,16 @@ export {
   type MaterialAccessor,
   type WorldMeshBuild,
 } from "./Terrain";
-export { buildVegetationGroup, isInStreamWaterZone, GRASS_INSTANCE_COUNT, FLOWER_INSTANCE_COUNT } from "./Vegetation";
-export { buildLandmarkGroup, TREE_TRUNK_COLLIDER_RADIUS, type LandmarkBuildResult } from "./Landmarks";
+export {
+  buildVegetationGroup,
+  isInStreamWaterZone,
+  GRASS_INSTANCE_COUNT,
+  FLOWER_INSTANCE_COUNT,
+} from "./Vegetation";
+export {
+  buildLandmarkGroup,
+  TREE_TRUNK_COLLIDER_RADIUS,
+  type LandmarkBuildResult,
+} from "./Landmarks";
 export { mulberry32, uniformRange, gaussianApprox, type SeededRandom } from "./scatter";
 export { WorldSystem, createWorldSystem, type WorldSystemOptions } from "./World";

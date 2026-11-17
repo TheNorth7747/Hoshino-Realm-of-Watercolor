@@ -7,12 +7,7 @@
  *   但导出名、签名与“1 单位 = 1 米、Y 向上”的语义不得改变。
  */
 import { Vector3 } from "three";
-import type {
-  LandmarkDefinition,
-  LandmarkId,
-  StoryNodeId,
-  WorldBounds,
-} from "../core/contracts";
+import type { LandmarkDefinition, LandmarkId, StoryNodeId, WorldBounds } from "../core/contracts";
 import { sampleTerrainHeight } from "../world/terrainHeight";
 
 /** 1 单位 = 1 米（PRD 5.3）。 */

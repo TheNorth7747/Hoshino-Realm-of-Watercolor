@@ -84,7 +84,10 @@ function smoothInner(d: number, inner: number, outer: number): number {
 /** 溪流固定断面：两岸 bankTop，中心下切 bedDepth。 */
 function streamChannelProfile(z: number): number {
   const d = z - STREAM.centerZ;
-  return STREAM_BANK_TOP - STREAM_BED_DEPTH * Math.exp(-(d * d) / (2 * STREAM_BED_SIGMA * STREAM_BED_SIGMA));
+  return (
+    STREAM_BANK_TOP -
+    STREAM_BED_DEPTH * Math.exp(-(d * d) / (2 * STREAM_BED_SIGMA * STREAM_BED_SIGMA))
+  );
 }
 
 /**
@@ -97,10 +100,24 @@ export function sampleTerrainHeight(x: number, z: number): number {
   let h = 0.22 * Math.sin(x / 29 + 0.8) * Math.cos(z / 31) + 0.15 * Math.sin(z / 41 + 0.5);
 
   // 2) 蓝花坡隆起（中心 = flower 地标）。
-  h += gaussianBump(x, z, LANDMARKS.flower.x, LANDMARKS.flower.z, FLOWER_MOUND_SIGMA, FLOWER_MOUND_HEIGHT);
+  h += gaussianBump(
+    x,
+    z,
+    LANDMARKS.flower.x,
+    LANDMARKS.flower.z,
+    FLOWER_MOUND_SIGMA,
+    FLOWER_MOUND_HEIGHT,
+  );
 
   // 3) 瞭望点缓台（结局回望高地，中心 = lookout 地标）。
-  h += gaussianBump(x, z, LANDMARKS.lookout.x, LANDMARKS.lookout.z, LOOKOUT_RISE_SIGMA, LOOKOUT_RISE_HEIGHT);
+  h += gaussianBump(
+    x,
+    z,
+    LANDMARKS.lookout.x,
+    LANDMARKS.lookout.z,
+    LOOKOUT_RISE_SIGMA,
+    LOOKOUT_RISE_HEIGHT,
+  );
 
   // 4) 溪流：靠近中心线时混入固定断面（两岸齐平，水面不悬空），远离时混回基底。
   const blend = smoothInner(Math.abs(z - STREAM.centerZ), 5, STREAM_BLEND_RANGE);
@@ -112,7 +129,9 @@ export function sampleTerrainHeight(x: number, z: number): number {
   for (const stone of steppingStonePositions()) {
     const dx = x - stone.x;
     const dz = z - stone.z;
-    h += STEPPING_STONE_HEIGHT * Math.exp(-(dx * dx + dz * dz) / (2 * STEPPING_STONE_SIGMA * STEPPING_STONE_SIGMA));
+    h +=
+      STEPPING_STONE_HEIGHT *
+      Math.exp(-(dx * dx + dz * dz) / (2 * STEPPING_STONE_SIGMA * STEPPING_STONE_SIGMA));
   }
 
   return h;

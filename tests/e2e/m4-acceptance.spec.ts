@@ -94,9 +94,7 @@ test("M4：连续游玩 10 秒的性能记录与预算", async ({ page }, testIn
   await page.keyboard.down("KeyW");
   for (let i = 0; i < 10; i += 1) {
     await page.waitForTimeout(1000);
-    const snapshot = await page.evaluate(
-      () => window.__STARWATER__?.game.getSnapshot() ?? null,
-    );
+    const snapshot = await page.evaluate(() => window.__STARWATER__?.game.getSnapshot() ?? null);
     if (snapshot) {
       samples.push({
         fps: snapshot.fps,
@@ -119,7 +117,8 @@ test("M4：连续游玩 10 秒的性能记录与预算", async ({ page }, testIn
   await testInfo.attach("m4-perf-record.json", {
     body: JSON.stringify(
       {
-        note: "headless Chromium + SwiftShader（软件光栅化），FPS 不代表真机；" +
+        note:
+          "headless Chromium + SwiftShader（软件光栅化），FPS 不代表真机；" +
           "AC-10 的 55FPS 目标必须在集成机真 GPU 上复测。",
         samples,
         maxDrawCalls,
