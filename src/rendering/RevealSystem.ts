@@ -18,6 +18,7 @@ import type {
   Unsubscribe,
 } from "../core/contracts";
 import { ColorRevealMask } from "./ColorRevealMask";
+import { FinaleReveal } from "./FinaleReveal";
 import { RevealBench } from "./RevealBench";
 import { RevealDebugView } from "./RevealDebugView";
 import { WatercolorPass } from "./WatercolorPass";
@@ -40,6 +41,8 @@ export class RevealSystem implements GameSystem {
 
   private readonly options: RevealSystemOptions;
   private readonly unsubscribers: Unsubscribe[] = [];
+  /** 最终章远景显色（只影响世界边界之外的远山）。 */
+  private readonly finale = new FinaleReveal();
   private mask: ColorRevealMask | null = null;
   private uniforms: RevealUniforms | null = null;
   private bench: RevealBench | null = null;
@@ -61,6 +64,11 @@ export class RevealSystem implements GameSystem {
 
   get paperPass(): WatercolorPass | null {
     return this.pass;
+  }
+
+  /** 最终章远景显色状态（调试与测试用）。 */
+  get finaleReveal(): FinaleReveal {
+    return this.finale;
   }
 
   init(context: GameContext): void {
@@ -99,10 +107,18 @@ export class RevealSystem implements GameSystem {
         this.mask?.bloom(payload.position, payload.radius, payload.duration);
       }),
     );
+    // 最终章远景显色：与花树 bloom 同一事件源，不新建故事状态（PRD 5.4）
+    this.unsubscribers.push(
+      context.events.on("story:completed", (payload) => {
+        if (payload.nodeId === "tree") this.finale.trigger();
+      }),
+    );
     this.unsubscribers.push(
       context.events.on("game:reset", () => {
         this.mask?.reset();
         this.bench?.reset();
+        this.finale.reset();
+        if (this.uniforms) this.uniforms.uFinaleReveal.value = 0;
       }),
     );
     this.unsubscribers.push(
@@ -128,6 +144,10 @@ export class RevealSystem implements GameSystem {
 
     // 排线按相机距离加粗需要相机世界坐标
     this.uniforms?.uCameraPosition.value.copy(context.camera.position);
+
+    // 远景显色推进（只影响世界边界之外的远山；界内遮罩不受影响）
+    const finaleValue = this.finale.update(deltaSeconds);
+    if (this.uniforms) this.uniforms.uFinaleReveal.value = finaleValue;
 
     this.bench?.update(deltaSeconds);
 
@@ -171,6 +191,7 @@ export class RevealSystem implements GameSystem {
       flushes: info.flushCount,
       blooms: info.activeBlooms,
       coverage: `${(mask.surface.readRevealCoverage() * 100).toFixed(1)}%`,
+      finale: Number(this.finale.value.toFixed(2)),
     };
   }
 }

@@ -33,6 +33,15 @@ export interface RevealUniforms {
   readonly uHatchScale: { value: number };
   readonly uEdgeJitter: { value: number };
   readonly uPulseStrength: { value: number };
+  /**
+   * 最终章远景显色 0..1（A1 / PRD 5.4「远景染色」）。
+   * 只作用于世界边界之外的片段（远山环带），界内染色完全不受影响。
+   */
+  readonly uFinaleReveal: { value: number };
+  /** 远景显色的噪声尺度（世界米），越大斑块越细。 */
+  readonly uFinaleNoiseScale: { value: number };
+  /** 远景显色时的饱和度倍率（远山本色与纸色接近，需要提饱和才看得出来）。 */
+  readonly uFinaleSaturation: { value: number };
 }
 
 export interface RevealUniformOptions {
@@ -47,6 +56,9 @@ export interface RevealUniformOptions {
   readonly hatchScale?: number;
   readonly edgeJitter?: number;
   readonly pulseStrength?: number;
+  readonly finaleNoiseScale?: number;
+  /** 远景显色的饱和度倍率；远山本色与纸色接近，需要提饱和才看得出来。 */
+  readonly finaleSaturation?: number;
 }
 
 /** 创建**一份**共享 uniforms；所有材质传入同一个对象。 */
@@ -69,6 +81,9 @@ export function createRevealUniforms(
     uHatchScale: { value: options.hatchScale ?? 14 },
     uEdgeJitter: { value: options.edgeJitter ?? 0.28 },
     uPulseStrength: { value: options.pulseStrength ?? 0.18 },
+    uFinaleReveal: { value: 0 },
+    uFinaleNoiseScale: { value: options.finaleNoiseScale ?? 0.07 },
+    uFinaleSaturation: { value: options.finaleSaturation ?? 2.4 },
   };
 }
 
@@ -146,6 +161,9 @@ uniform float uPaperScale;
 uniform float uHatchScale;
 uniform float uEdgeJitter;
 uniform float uPulseStrength;
+uniform float uFinaleReveal;
+uniform float uFinaleNoiseScale;
+uniform float uFinaleSaturation;
 
 varying vec3 vWatercolorWorldPosition;
 
@@ -191,13 +209,35 @@ float wcPulse = wcMask.g * wcInBounds;
 
 float wcGrain = wcPaperGrain(wcWorld * uPaperScale);
 float wcEdgeNoise = wcNoise(wcWorld * uPaperScale * 0.5) - 0.5;
-float wcMasked = smoothstep(0.06, 0.72, wcReveal + wcEdgeNoise * uEdgeJitter);
+
+// 远景（世界边界之外）：遮罩 UV 覆盖不到，最终章用整片显色补上。
+// wcDistant 在界内恒为 0，因此不会改变脚下染色与普通节点 bloom（AC-03～05）。
+float wcDistant = 1.0 - wcInBounds;
+float wcFinale = 0.0;
+if (wcDistant > 0.0) {
+	float wcFinaleNoise = wcPaperGrain(wcWorld * uFinaleNoiseScale);
+	float wcFinalePatch = 0.5 + 0.5 * smoothstep(0.15, 0.9, wcFinaleNoise);
+	float wcFinaleHeight = mix(0.55, 1.0, smoothstep(-4.0, 26.0, vWatercolorWorldPosition.y));
+	wcFinale = uFinaleReveal * wcFinalePatch * wcFinaleHeight;
+}
+float wcRevealTotal = wcReveal + wcFinale * wcDistant;
 
 vec3 wcPaper = uPaperColor * (0.96 + 0.06 * wcGrain);
 vec3 wcInk = mix(wcPaper, uInkColor, wcPencilHatch(wcWorld, wcLineWidth) * uInkStrength);
 vec3 wcPaint = diffuseColor.rgb * (0.86 + 0.14 * wcGrain);
-vec3 wcFinal = mix(wcInk, wcPaint, wcMasked);
+
+// 远山本色（#a9b8c6）与纸色太接近，雾一压就分不出来；
+// 「恢复色彩」的实质是把本色饱和度提上来，而不是另造一个色相。
+float wcLuma = dot(wcPaint, vec3(0.299, 0.587, 0.114));
+vec3 wcPaintDistant = clamp(vec3(wcLuma) + (wcPaint - vec3(wcLuma)) * uFinaleSaturation, 0.0, 1.0);
+vec3 wcPaintUsed = mix(wcPaint, wcPaintDistant, wcDistant * uFinaleReveal);
+
+float wcMasked = smoothstep(0.06, 0.72, wcRevealTotal + wcEdgeNoise * uEdgeJitter);
+
+vec3 wcFinal = mix(wcInk, wcPaintUsed, wcMasked);
 wcFinal += uPulseColor * wcPulse * uPulseStrength;
+// 最终章的远景再被花树的光晕染暖一点，让「天边也活了」看得出来
+wcFinal += uPulseColor * (uFinaleReveal * wcDistant * 0.1);
 
 diffuseColor.rgb = wcFinal;
 `;
