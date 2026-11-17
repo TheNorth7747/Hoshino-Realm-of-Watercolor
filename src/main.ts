@@ -15,6 +15,7 @@ import type { GameSystem, StarwaterBridge } from "./core/contracts";
 import { createPlayerSystems } from "./player";
 import { RevealSystem } from "./rendering";
 import { createWorldSystem } from "./world";
+import { createNarrativeSystems } from "./narrative";
 
 declare global {
   interface Window {
@@ -33,7 +34,7 @@ interface SystemsBuild {
 
 /**
  * 模块挂载表（集成者独占）。
- * M2：A3 场景 + A2 玩家/镜头 + A1 染色。A4 故事/UI、A5 VFX 合入后继续追加。
+ * M3：A4 故事/伙伴/星屑/UI + A3 场景 + A2 玩家/镜头 + A1 染色。A5 VFX 合入后继续追加。
  */
 function createSystems(): SystemsBuild {
   const { player, camera } = createPlayerSystems();
@@ -42,11 +43,14 @@ function createSystems(): SystemsBuild {
   const world = createWorldSystem({
     revealUniformsProvider: () => reveal.revealUniforms,
   });
+  // companion → story → HUD/对话/结局/调试（同阶段内按注册顺序执行）
+  const narrative = createNarrativeSystems({ player });
 
   return {
-    // 注册顺序：player → reveal → world → camera（world 与 reveal 同为 reveal 阶段，
-    // 稳定排序保证世界的水彩材质绑定发生在 RevealSystem 更新之后、渲染之前）
-    systems: [player, reveal, world, camera],
+    // 注册顺序：player → reveal → world → narrative → camera。
+    // Game 按 SYSTEM_PHASES 稳定排序，所以 story 一定在 reveal 之前、
+    // world 的水彩材质绑定在 RevealSystem 之后（PRD 7.3）。
+    systems: [player, reveal, world, ...narrative, camera],
     attachColliders(): void {
       player.addColliders(world.getColliders());
     },

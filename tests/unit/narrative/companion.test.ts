@@ -2,8 +2,7 @@
  * 伙伴测试（AC-07）：侧后方跟随、>12m 回收、卡住 >2s 回收、引导、重置、释放。
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { Vector3 } from "three";
-import { LANDMARKS, distanceXZ } from "../../../src/config/world";
+import { LANDMARKS, distanceXZ, sampleTerrainHeight } from "../../../src/config/world";
 import { CompanionController } from "../../../src/companion/CompanionController";
 import { advanceAll, createTestBundle } from "./helpers";
 import type { TestBundle } from "./helpers";
@@ -139,9 +138,13 @@ describe("重置与释放", () => {
 
     item.player.moveTo(0, 32);
     item.events.emit("game:reset");
-    const expected = new Vector3(1.1, 1.15, 33.9);
     const root = item.companion.object3d;
-    expect(root?.position.distanceTo(expected)).toBeLessThan(0.01);
+    expect(root).toBeDefined();
+    if (root) {
+      // 水平位置固定在出生点侧后方；高度取共享地形采样器之上（M2 起地形不再平坦）
+      expect(distanceXZ(root.position, { x: 1.1, z: 33.9 })).toBeLessThan(0.01);
+      expect(root.position.y).toBeGreaterThan(sampleTerrainHeight(1.1, 33.9));
+    }
     expect(stat(item, "target")).toBe("flower");
     expect(stat(item, "stuckSeconds")).toBe(0);
   });

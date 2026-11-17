@@ -64,7 +64,8 @@ body {
   left: 12px;
   z-index: 30;
   max-width: 320px;
-  max-height: calc(100% - 24px);
+  /* 限高：A4 的故事调试面板在左下角，A0 面板不能整列铺满把它们盖住 */
+  max-height: calc(56% - 24px);
   overflow: auto;
   padding: 10px 12px;
   border-radius: 10px;
