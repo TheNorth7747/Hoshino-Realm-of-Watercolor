@@ -7,6 +7,10 @@
  *   不引入第二套世界坐标（PRD 5.3 / 7.2）。
  * - 碰撞：树干与岩石用圆形碰撞体（半径与 A2 的 CollisionCircle 契约一致），
  *   由集成者接到 PlayerController.addColliders()；踏石不设碰撞（可直接通行）。
+ *
+ * 踏石（PRD 5.3「设置 3～5 块踏石」）：位置唯一来源是 terrainHeight 的
+ * `steppingStonePositions()`（由 config 的 STREAM 数量/间距推导），这里只负责
+ * 在其上摆石块几何体；高度取自地形采样，因此石块顶面与可通过的河槽凸起一致。
  */
 import {
   CylinderGeometry,
@@ -16,7 +20,7 @@ import {
 } from "three";
 import { LANDMARKS } from "../config/world";
 import type { CollisionCircle } from "../player/collision";
-import { sampleTerrainHeight } from "./terrainHeight";
+import { sampleTerrainHeight, steppingStonePositions } from "./terrainHeight";
 import {
   geometryTriangleCount,
   tagWorldMaterialKind,
@@ -154,6 +158,21 @@ export function buildLandmarkGroup(materials: MaterialAccessor): LandmarkBuildRe
     triangleCount += geometryTriangleCount(rock.geometry);
     colliders.push({ x, z, radius: PROP_COLLIDER_RADIUS });
     group.add(rock);
+  });
+
+  // ---- 踏石（PRD 5.3：溪流上 3～5 块，可通行，不设碰撞）----
+  const stones = steppingStonePositions();
+  stones.forEach((stone, index) => {
+    const y = sampleTerrainHeight(stone.x, stone.z);
+    // 石面略高于河槽凸起顶面一半，形成明确的“可踩”视觉，同时不阻断水槽。
+    const slab = new Mesh(new IcosahedronGeometry(0.62, 0), materials("rock"));
+    slab.name = `stepping-stone-${index}`;
+    tagWorldMaterialKind(slab, "rock");
+    slab.position.set(stone.x, y + 0.06, stone.z);
+    slab.scale.set(1.05, 0.32, 0.95);
+    slab.rotation.y = uniformRange(random, 0, Math.PI * 2);
+    triangleCount += geometryTriangleCount(slab.geometry);
+    group.add(slab);
   });
 
   return { group, triangleCount, colliders };

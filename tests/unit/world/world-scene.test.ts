@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { InstancedMesh, MeshStandardMaterial, Texture, type BufferAttribute, type Mesh } from "three";
-import { LANDMARKS, WORLD_BOUNDS } from "../../../src/config/world";
+import { LANDMARKS, STREAM, WORLD_BOUNDS } from "../../../src/config/world";
 import { createRevealUniforms, getRevealUniforms } from "../../../src/rendering/WatercolorMaterial";
-import { sampleTerrainHeight, STREAM_WATER_LEVEL } from "../../../src/world/terrainHeight";
+import {
+  sampleTerrainHeight,
+  steppingStonePositions,
+  STREAM_WATER_LEVEL,
+} from "../../../src/world/terrainHeight";
 import { GRASS_INSTANCE_COUNT, FLOWER_INSTANCE_COUNT } from "../../../src/world/Vegetation";
 import { WORLD_MATERIAL_APPEARANCE, WORLD_MATERIAL_KINDS } from "../../../src/world/worldMaterials";
 import { TREE_TRUNK_COLLIDER_RADIUS } from "../../../src/world/Landmarks";
@@ -103,6 +107,57 @@ describe("WorldSystem · 场景构建", () => {
     world.init(context);
     world.dispose();
     expect(() => world.dispose()).not.toThrow();
+  });
+});
+
+describe("WorldSystem · 溪流踏石（PRD 5.3）", () => {
+  it("石块数量与位置来自 config 推导（steppingStonePositions）", () => {
+    const context = createContext();
+    const world = createWorldSystem();
+    world.init(context);
+
+    const stones = steppingStonePositions();
+    expect(stones.length).toBe(STREAM.steppingStoneCount);
+
+    for (let i = 0; i < stones.length; i += 1) {
+      const expected = stones[i];
+      if (!expected) continue;
+      const slab = context.worldRoot.getObjectByName(`stepping-stone-${i}`);
+      expect(slab).toBeDefined();
+      expect(slab?.position.x).toBeCloseTo(expected.x, 6);
+      expect(slab?.position.z).toBeCloseTo(expected.z, 6);
+    }
+    world.dispose();
+  });
+
+  it("石块贴地摆放且顶面高于水面（视觉可踩）", () => {
+    const context = createContext();
+    const world = createWorldSystem();
+    world.init(context);
+
+    const stones = steppingStonePositions();
+    for (let i = 0; i < stones.length; i += 1) {
+      const stone = stones[i];
+      if (!stone) continue;
+      const slab = context.worldRoot.getObjectByName(`stepping-stone-${i}`) as Mesh;
+      const ground = sampleTerrainHeight(stone.x, stone.z);
+      expect(slab.position.y).toBeGreaterThan(ground); // 微微露出地面
+      expect(slab.position.y).toBeGreaterThan(STREAM_WATER_LEVEL); // 高于水面
+    }
+    world.dispose();
+  });
+
+  it("踏石使用 rock 材质种类，随染色一起被注入", () => {
+    const context = createContext();
+    const uniforms = createRevealUniforms(new Texture(), WORLD_BOUNDS);
+    const world = createWorldSystem({ revealUniformsProvider: () => uniforms });
+    world.init(context);
+    world.update(1 / 60, context);
+
+    const slab = context.worldRoot.getObjectByName("stepping-stone-0") as Mesh;
+    expect(slab.userData["worldMaterialKind"]).toBe("rock");
+    expect(getRevealUniforms(slab.material as MeshStandardMaterial)).not.toBeNull();
+    world.dispose();
   });
 });
 
