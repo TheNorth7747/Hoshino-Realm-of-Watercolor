@@ -1,158 +1,184 @@
-# A6 / RC 最终验收报告（M4 发布候选）
+# A6 最终验收报告（main · 发布候选门禁）
 
 > 执行者：Agent 4（A6 测试与验收）
-> 验收分支：`test/rc-acceptance`
-> 代码基线：main `69b4897` + 两个 P0 修复（镜头 `b2e8b60`、远山显色 `6b8fc36`）
-> 真机采集提交：`6b8fc36e44a0dcc0176497e646c95652d300bd4e`
+> 验收分支：**`main`**（集成者已合并三条 PR）
+> 验收基线：`e666dc6fcece2bad3cd60586f5c3b10653399f66`（HEAD）
+> 已合并 PR 提交：`c48f71f`（finale-camera）、`044b2bc`（finale-reveal）、`66ed509`（rc-acceptance）
 > 日期：2026-11-17
-> 原则：**只集成搬运两个 P0 修复、只写测试与本报告；未改写任何业务模块的实现逻辑；未删断言、未加宽松等待、未降阈值。**
+> 运行环境：Node **v24.22.2**（`C:\Users\Administrator\AppData\Local\Programs\node-v24.22.2-win-x64`），npm 11.19.1
+> 原则：**只改测试与本报告，不动业务代码；未删断言、未加宽松等待、未降阈值；FPS 一律取自真 GPU，不用 SwiftShader 冒充。**
 
 ---
 
-## 1. 集成状态与代码基线
+## 1. 基线与 P0 缺口闭合状态
 
-main `69b4897` 已合并 A1～A5。两个 P0 修复在验收时由各自负责人完成，集成者（本分支）只做搬运、不改逻辑：
+| 项                    | 状态         | 证据                                                                                                                                                                             |
+| --------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1～A5 集成           | ✅ 已在 main | `main.ts` 挂载 `player → reveal → world → narrative → vfx → camera`                                                                                                              |
+| P0-1 结局镜头平滑拉远 | ✅ 闭合      | `src/player/CameraRig.ts`（`CAMERA_FINALE_*` / `finaleActive`）、`tests/unit/finale-camera.test.ts`；RC-01 e2e 通过                                                              |
+| P0-2 远山显色         | ✅ 闭合      | `src/rendering/FinaleReveal.ts`、`RevealSystem.ts`、`WatercolorMaterial.ts`（`uFinaleReveal`/`uFinaleSaturation`）、`tests/unit/rendering/finale-reveal.test.ts`；RC-02 e2e 通过 |
+| AC-10 真机性能        | ✅ 闭合      | RTX 3060 硬件加速，中位 165 / 低帧 164.7 FPS（§3）                                                                                                                               |
+| release tag           | **未创建**   | `git tag -l` 为空；本轮不建 tag、不自行发布，放行由集成者决定                                                                                                                    |
 
-| 修复             | 来源                                          | 合入提交                 | 内容                                                                                                                                              |
-| ---------------- | --------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 结局镜头平滑拉远 | `fix/finale-camera` @ `86e06f1`（已提交）     | `b2e8b60`（cherry-pick） | `story:completed(tree)` 触发，指数阻尼把距离 8m→13m、俯角→0.62rad；逐帧增量 <0.2m（A2 单测验证）；reset/dispose 复位                              |
-| 远山显色         | `fix/finale-reveal`（未提交工作树，**快照**） | `6b8fc36`                | 新增 `FinaleReveal` + `uFinaleReveal`/`uFinaleSaturation` uniform，由同一 `story:completed(tree)` 事件驱动界外远山显色；2.6s ease-out；reset 归零 |
-
-> 远山快照在集成时经过两轮校正：首轮快照 `WatercolorMaterial.ts` 处于中间态（typecheck 失败），
-> 次轮快照 shader 存在 `wcPaint` 声明前使用（WebGL 编译失败）。最终快照 `285ed180…` 经源文件
-> typecheck 验证干净、shader 编译无误后合入。这些是**合入前源侧 defect 的规避**，非 RC 分支自造改动。
-
----
-
-## 2. 真实命令结果（test/rc-acceptance）
-
-| 命令                                                        | 结果    | 数字                                                                       |
-| ----------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
-| `npm run typecheck`                                         | ✅ 通过 | strict，0 错误                                                             |
-| `npm test`                                                  | ✅ 通过 | **24 文件 / 272 用例通过**（A0 基线 + A1～A5 + 2 个 P0 修复单测 16+23 例） |
-| `npm run build`                                             | ✅ 通过 | 64 modules；index.js 100.17 kB、CSS 2.74 kB、three vendor 537.76 kB        |
-| `npm run test:e2e`                                          | ✅ 通过 | **32/32 用例通过**（含 RC 四个 P0 集成 e2e），0 失败                       |
-| 真机 `npx playwright test --config=playwright.hw.config.ts` | ✅ 通过 | AC-10 硬件加速复测，见 §3                                                  |
-
-A6/RC 新增测试文件（仅测试/配置，不改业务）：
-
-- `tests/e2e/rc-finale-acceptance.spec.ts`：4 个 P0 集成 e2e（镜头/远山/结局延迟/二次通关）。
-- `tests/hardware/rc-ac10-hardware.spec.ts` + `playwright.hw.config.ts`：真机 AC-10 复测（独立目录，避免被 SwiftShader 默认配置误跑）。
-- 继承 main 的 `a6-perf-collect.spec.ts` / `a6-ac10-1080p.spec.ts`（10 分钟稳定性与 1080p 采集）。
+结论：**P0 缺口与 AC-10 均已闭合**，满足「宣布 M4 完全通过」的前置条件；但是否打 tag / 宣布 RC 由集成者按流程决定，本轮不越权代为发布。
 
 ---
 
-## 3. 性能记录（真机，硬件加速）
+## 2. 真实命令结果（全部基于最新 main + Node 24）
 
-### 3.1 测试设备与浏览器（全部为实测字段）
+| 命令                                                                                          | 结果    | 数字                                                                    |
+| --------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------- |
+| `npm ci`                                                                                      | ✅ 通过 | 154 包，29s；`package-lock.json` 未改动                                 |
+| `npm run typecheck`                                                                           | ✅ 通过 | strict，0 错误                                                          |
+| `npm run lint`                                                                                | ✅ 通过 | 0 错误                                                                  |
+| `npm run format:check`                                                                        | ✅ 通过 | All matched files use Prettier code style                               |
+| `npm test`                                                                                    | ✅ 通过 | **24 文件 / 272 用例通过**                                              |
+| `npm run build`                                                                               | ✅ 通过 | 64 modules；`index.js` 100.17 kB、CSS 2.74 kB、`three` vendor 537.76 kB |
+| `npm run test:e2e`                                                                            | ✅ 通过 | **32/32 用例通过**（含 RC-01～04），9.6 分钟，0 失败                    |
+| `A6_SAMPLE_SEC=600 A6_SAMPLE_TAG=10min npx playwright test tests/e2e/a6-perf-collect.spec.ts` | ✅ 通过 | **269 采样 / 600s**，错误 0、资源无增长（§3.3）                         |
+| `npm run test:e2e:hw`                                                                         | ✅ 通过 | **AC-10 真机门禁 PASS**，60s（§3.2）                                    |
 
-| 项           | 值                                                                                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 提交哈希     | `6b8fc36e44a0dcc0176497e646c95652d300bd4e`                                                                                                            |
-| CPU          | 12th Gen Intel(R) Core(TM) i5-12500H，16 逻辑核                                                                                                       |
-| GPU          | **NVIDIA GeForce RTX 3060 Laptop GPU**（ANGLE / D3D11 vs_5_0 ps_5_0，驱动 32.0.16.2114）                                                              |
-| 内存         | 15.7 GiB                                                                                                                                              |
-| 浏览器       | Google Chrome 157（`HeadlessChrome/157.0.0.0`，Playwright channel=chrome）                                                                            |
-| 分辨率       | 1920×1080                                                                                                                                             |
-| DPR          | 1（运行时 `DPR_CAP=1.5` 收敛；系统 DPR=1）                                                                                                            |
-| 采样时长     | **60 秒**（60 个采样点）                                                                                                                              |
-| 渲染设备确认 | `ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU ...) Direct3D11` —— **不是 SwiftShader**（测试内含硬门禁断言，命中 SwiftShader/software 立即失败） |
-| OS / Node    | Windows 10.0.26300 / v22.22.2                                                                                                                         |
-
-### 3.2 AC-10 真机结果
-
-| 指标            | 实测                                                     | 目标     | 判定    |
-| --------------- | -------------------------------------------------------- | -------- | ------- |
-| 中位 FPS        | **165**                                                  | ≥55      | ✅ 通过 |
-| 低帧 FPS        | **163.7**                                                | ≥30      | ✅ 通过 |
-| Draw Calls 峰值 | 45                                                       | ≤180     | ✅ 通过 |
-| 三角面峰值      | 50,005                                                   | ≤350,000 | ✅ 通过 |
-| 运行时错误      | 0（favicon.ico 的浏览器自动 404 已精确排除，非游戏错误） | 0        | ✅ 通过 |
-
-FPS 采样全程稳定在 164～165.7，无下降趋势。证据文件：`test-results/rc-ac10-hardware.json`（含全部 60 个采样点与设备字段）。
-
-### 3.3 与软件渲染的对照（说明为何此前是假象）
-
-| 后端                                       | 中位/低帧 FPS | 说明                                |
-| ------------------------------------------ | ------------- | ----------------------------------- |
-| SwiftShader（默认 playwright.config.ts）   | 20 / 20       | 软件光栅化封顶，**不作 AC-10 结论** |
-| 真 GPU RTX 3060（playwright.hw.config.ts） | 165 / 163.7   | 真实硬件加速，AC-10 判定依据        |
+> 环境备注：`npm ci` 输出 esbuild postinstall 未执行的告警（npm 11 allowScripts 机制），
+> 但 typecheck / test / build / e2e 全部真实成功，未造成任何影响。
+>
+> 执行备注：10 分钟采集首次启动时被沙箱的批量删除保护拦截（Playwright 清理 3141 个历史产物）。
+> 用「目录重命名归档（非删除）」保留旧产物后重跑即通过；这是工具保护机制，不是业务缺陷。
 
 ---
 
-## 4. AC-01～12 逐项结论（通过 / 失败 / 环境阻塞）
+## 3. 性能记录与采样 JSON 路径
 
-| AC    | 验收项       | 结论    | 依据                                                                                                                                                                |
+### 3.1 测试设备与浏览器（真机，全部实测字段）
+
+| 项           | 值                                                                                                                                                                |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 提交哈希     | `e666dc6fcece2bad3cd60586f5c3b10653399f66`                                                                                                                        |
+| CPU          | 12th Gen Intel(R) Core(TM) i5-12500H，16 逻辑核                                                                                                                   |
+| GPU          | **NVIDIA GeForce RTX 3060 Laptop GPU**（ANGLE / D3D11 vs_5_0 ps_5_0，驱动 32.0.16.2114）                                                                          |
+| 内存         | 15.7 GiB                                                                                                                                                          |
+| 浏览器       | Google Chrome 157（`HeadlessChrome/157.0.0.0`，Playwright `channel=chrome`）                                                                                      |
+| 分辨率       | **1920×1080**                                                                                                                                                     |
+| DPR          | **1**（运行时 `DPR_CAP=1.5` 收敛；系统 DPR=1）                                                                                                                    |
+| 采样时长     | **60 秒**（60 个采样点，1 Hz）                                                                                                                                    |
+| 渲染设备确认 | `ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU ...) Direct3D11` —— **不是 SwiftShader**；用例内置硬门禁，命中 SwiftShader/software/llvmpipe/softpipe 立即失败 |
+| OS / Node    | Windows 10.0.26300 / **v24.22.2**                                                                                                                                 |
+
+采样 JSON 路径（本机，非源码）：
+
+- **真机 AC-10 证据**：`test-results/rc-ac10-hardware.json`（含 60 个采样点、全部设备字段、PASS 判定）
+- **10 分钟稳定性证据**：`test-results/a6-perf-10min.json`（269 个采样点）
+- 对照用（软件渲染，**不作结论**）：`test-results/a6-ac10-1080p.json`、`test-results/a6-perf-short.json`
+
+### 3.2 AC-10 真机结果（`test-results/rc-ac10-hardware.json`）
+
+| 指标            | 实测                                                          | 目标     | 判定    |
+| --------------- | ------------------------------------------------------------- | -------- | ------- |
+| 中位 FPS        | **165**                                                       | ≥55      | ✅ 通过 |
+| 低帧 FPS        | **164.7**                                                     | ≥30      | ✅ 通过 |
+| Draw Calls 峰值 | 45                                                            | ≤180     | ✅ 通过 |
+| 三角面峰值      | 50,005                                                        | ≤350,000 | ✅ 通过 |
+| 运行时错误      | 0（favicon.ico 浏览器自动 404 已按 URL 精确排除，非游戏错误） | 0        | ✅ 通过 |
+
+FPS 全程稳定在 164.7～165.2，无下降趋势。`ac10.verdict = "PASS"`。
+
+### 3.3 10 分钟稳定性（AC-09，`test-results/a6-perf-10min.json`）
+
+| 指标          | 实测                                             | 判定                                              |
+| ------------- | ------------------------------------------------ | ------------------------------------------------- |
+| 采样点数      | 269（600s，SwiftShader 软件渲染）                | —                                                 |
+| Draw Calls    | 峰值 45，首段 45 → 末段 31（区间 31～45）        | ✅ 无单调增长                                     |
+| 三角面        | 峰值 50,005，首段 50,005 → 末段 45,585           | ✅ 无单调增长                                     |
+| 运行时错误    | `maxErrorCount=0`；`pageerror`/`console.error`=0 | ✅ 无未处理异常                                   |
+| 中位/低帧 FPS | 20 / 20                                          | 软件渲染封顶，**仅作稳定性观测，不作 AC-10 结论** |
+
+### 3.4 软件渲染 vs 真机（为何 20 FPS 是假象）
+
+| 后端                   | 配置                                                               | 中位/低帧 FPS | 用途                                     |
+| ---------------------- | ------------------------------------------------------------------ | ------------- | ---------------------------------------- |
+| SwiftShader 软件光栅化 | 默认 `playwright.config.ts`（`--use-angle=swiftshader`）           | 20 / 20       | 功能 e2e、稳定性观测；**不得用于 AC-10** |
+| 真 GPU RTX 3060        | `playwright.hw.config.ts`（`channel=chrome`，无 SwiftShader 参数） | 165 / 164.7   | **AC-10 唯一判定依据**                   |
+
+---
+
+## 4. AC-01～12 逐项真实结果（通过 / 失败 / 环境阻塞）
+
+| AC    | 验收项       | 结论    | 真实依据                                                                                                                                                            |
 | ----- | ------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AC-01 | 启动与构建   | ✅ 通过 | typecheck/test/build 全绿；e2e 页面进入、canvas 非零、无异常                                                                                                        |
-| AC-02 | 移动与镜头   | ✅ 通过 | M1-1 e2e；`camera-rig.test.ts` 14 例 + 结局运镜 `finale-camera.test.ts` 23 例；RC-01 端到端验证镜头平滑拉远 8→13m                                                   |
+| AC-01 | 启动与构建   | ✅ 通过 | `npm ci` + typecheck/lint/format:check/test/build 全绿；e2e 页面进入、canvas 非零、无异常                                                                           |
+| AC-02 | 移动与镜头   | ✅ 通过 | M1-1 e2e；`camera-rig.test.ts` 14 例；`finale-camera.test.ts` 23 例（逐帧 <0.2m）；**RC-01** 端到端 8→13m 平滑拉远、reset 复位                                      |
 | AC-03 | 脚下染色     | ✅ 通过 | A1 e2e「L 形路径不被镜像」+ `mask-mapping.test.ts` 12 例                                                                                                            |
-| AC-04 | 持续染色     | ✅ 通过 | M1-3 e2e + `color-reveal-mask.test.ts` 14 例                                                                                                                        |
-| AC-05 | 跨材质一致   | ✅ 通过 | M1-4 e2e（纹理 uuid == uniform）+ `watercolor-material.test.ts` 10 例；远山显色只作用界外，不改变界内遮罩（RC-02）                                                  |
+| AC-04 | 持续染色     | ✅ 通过 | M1-3 e2e「离开后返回颜色仍在」+ `color-reveal-mask.test.ts` 14 例                                                                                                   |
+| AC-05 | 跨材质一致   | ✅ 通过 | M1-4 e2e（纹理 uuid == uniform）+ `watercolor-material.test.ts` 10 例；**RC-02** 证实远山显色只作用界外、界内遮罩不变                                               |
 | AC-06 | 三个故事节点 | ✅ 通过 | M3 e2e 三节点闭环 + 对话 + `story-system.test.ts` 13 例（前置/幂等）                                                                                                |
-| AC-07 | 伙伴与收集   | ✅ 通过 | `companion.test.ts` 11 例、`shards.test.ts` 5 例、M3 HUD 0/3→3/3                                                                                                    |
-| AC-08 | 结局与重置   | ✅ 通过 | RC-03 结局 UI 延迟 ≥2s（delaySeconds=2.5）；RC-04 重置后完整二次通关；M3 + `reset.test.ts` 4 例                                                                     |
-| AC-09 | 稳定性       | ✅ 通过 | 真实 10 分钟连续游玩：273 采样、错误 0、资源无单调增长                                                                                                              |
-| AC-10 | 性能         | ✅ 通过 | **真 GPU RTX 3060**：中位 165 / 低帧 163.7 FPS、1920×1080、DPR 1、drawCalls 45、三角面 50,005；详见 §3（软件渲染结果已弃用）                                        |
+| AC-07 | 伙伴与收集   | ✅ 通过 | `companion.test.ts` 11 例（>12m / 卡住 2s 回收）、`shards.test.ts` 5 例（去重）、M3 HUD 0/3→3/3                                                                     |
+| AC-08 | 结局与重置   | ✅ 通过 | **RC-03** 结局 UI 延迟 ≥2s（`delaySeconds=2.5`）；**RC-04** 重置后完整二次通关；M3 + `reset.test.ts` 4 例                                                           |
+| AC-09 | 稳定性       | ✅ 通过 | **真实 10 分钟**：269 采样、错误 0、drawCalls/三角面无单调增长（§3.3）                                                                                              |
+| AC-10 | 性能         | ✅ 通过 | **真机 RTX 3060 / Chrome 157 / 1920×1080 / DPR 1 / 60s**：中位 165、低帧 164.7 FPS、drawCalls 45、三角面 50,005（§3.2）；SwiftShader 的 20 FPS 已弃用               |
 | AC-11 | 可调试性     | ✅ 通过 | `?debug=1`：FPS/帧时间/Draw Calls/三角面/系统列表、reveal 缩略图/笔刷（含 finale）、player 坐标、story step/shards、vfx 统计、camera finale；M1-5/M4/A1/RC e2e 断言 |
-| AC-12 | 数据解耦     | ✅ 通过 | M3 e2e + `story-data.test.ts` 12 例；文本来自 `story.json`、坐标来自 `config/world.ts`；两个 P0 修复均由共享事件驱动，未新增故事状态                                |
+| AC-12 | 数据解耦     | ✅ 通过 | M3 e2e + `story-data.test.ts` 12 例；文本来自 `story.json`、坐标来自 `config/world.ts`；两个 P0 修复均由共享 `story:completed` 事件驱动，未新增故事状态             |
 
 汇总：**12 项全部通过；0 失败；0 环境阻塞。**
 
 ---
 
-## 5. 两个 P0 修复的 RC 集成 e2e（真实结果）
+## 5. 两个 P0 修复的集成 e2e（main 上真实结果）
 
-| 用例  | 验证内容                                                                                                         | 结果    |
-| ----- | ---------------------------------------------------------------------------------------------------------------- | ------- |
-| RC-01 | 花树完成后镜头平滑拉远：进入运镜态、目标 13m、单调不回退、收敛不过冲、reset 回 8m；逐帧 <0.2m 由 A2 单测严格覆盖 | ✅ 通过 |
-| RC-02 | 远山显色只响应 tree（flower 时为 0）、单调推进至 ~1、reset 归零、不改变界内遮罩                                  | ✅ 通过 |
-| RC-03 | 结局 UI 在花树完成后仍延迟 ≥2s 出现（不被 P0 运镜/显色修复破坏）                                                 | ✅ 通过 |
-| RC-04 | 结局页按钮重置后：镜头/远山/星屑/结局全复位，并可完整二次通关再次进入结局                                        | ✅ 通过 |
+| 用例  | 验证内容                                                                                               | 结果    |
+| ----- | ------------------------------------------------------------------------------------------------------ | ------- |
+| RC-01 | 花树完成后镜头进入运镜态、目标 13m、单调不回退、收敛不过冲、reset 回 8m；逐帧 <0.2m 由 A2 单测严格覆盖 | ✅ 通过 |
+| RC-02 | 远山显色只响应 tree（flower 时为 0）、单调推进至 ~1、reset 归零、不改变界内遮罩                        | ✅ 通过 |
+| RC-03 | 结局 UI 在花树完成后仍延迟 ≥2s 出现（未被 P0 修复破坏）                                                | ✅ 通过 |
+| RC-04 | 结局页按钮重置后镜头/远山/星屑/结局全复位，并可完整二次通关再次进入结局                                | ✅ 通过 |
 
 ---
 
 ## 6. 失败项、缺陷与责任划分
 
-### 6.1 最终失败项
+### 6.1 本轮失败项
 
-无。所有命令与用例真实通过，AC-01～12 全部通过。
+**无。** 全部 6 组命令真实通过，AC-01～12 全部通过，0 断言失败、0 未处理异常。
 
-### 6.2 验收过程中发现并已闭环的问题（非 RC 分支自造）
+### 6.2 AC-10 不达标时的责任划分预案（本轮未触发）
 
-| 编号  | 问题                                                                                      | 责任方                      | 状态                                                                                           |
-| ----- | ----------------------------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------- |
-| RC-D1 | 远山修复合入首轮快照 `WatercolorMaterial.ts` 缺 `finaleSaturation` 字段（typecheck 失败） | A1 / `fix/finale-reveal`    | 源侧已修，RC 取稳定快照后闭环                                                                  |
-| RC-D2 | 远山修复 shader 中 `wcPaint` 声明前使用（WebGL 编译失败，118 条 console error）           | A1 / `fix/finale-reveal`    | 源侧已调整声明顺序，RC 取稳定快照后闭环；RC-02 的 console-error 断言捕获到此问题，证明测试有效 |
-| RC-D3 | 浏览器自动请求 `/favicon.ico` 的 404（index.html 无 favicon）                             | A0 / `index.html`（非阻塞） | 真机采集用例精确排除该条浏览器行为，其余错误照常捕获；不影响游戏                               |
+真机复测 **PASS**，无需按渲染负载归因。若未来回归不达标，按以下顺序定位，交对应模块负责人修复，**不改断言放行**：
 
-### 6.3 历史问题状态更新
+| 优先级 | 疑点                                             | 责任模块                     |
+| ------ | ------------------------------------------------ | ---------------------------- |
+| 1      | 遮罩更新频率、脏更新失效、CanvasTexture 每帧上传 | **A1**（`src/rendering/**`） |
+| 2      | 三角面预算、透明层叠加面积、InstancedMesh 批次   | **A3**（`src/world/**`）     |
+| 3      | 花瓣/涟漪粒子叠加、透明过度绘制                  | **A5**（`src/effects/**`）   |
 
-- A6-01（旧报告的「AC-10 待真 GPU 复测」）：**已闭环**——真机 RTX 3060 复测通过（§3）。
-- A6-02（`AC_CHECKLIST.md` 旧视角）：main 已由 `69b4897` 标注为 A5 历史记录并指向本报告。
-- A6-03（原仅 10 秒性能）：已由 10 分钟稳定性采集 + 60 秒真机复测覆盖。
+### 6.3 环境问题（非业务缺陷，已记录）
+
+| 编号          | 问题                                                        | 归属                        | 状态                                      |
+| ------------- | ----------------------------------------------------------- | --------------------------- | ----------------------------------------- |
+| ENV-01        | `npm ci` 的 esbuild postinstall 告警（npm 11 allowScripts） | 构建环境                    | 未影响任何命令，全绿                      |
+| ENV-02        | Playwright 清理 3141 个历史产物触发沙箱批量删除保护         | 测试环境                    | 目录重命名归档后重跑通过                  |
+| RC-D3（历史） | 浏览器自动请求 `/favicon.ico` 的 404                        | A0 / `index.html`（非阻塞） | 真机用例按 URL 精确排除，其余错误照常捕获 |
 
 ---
 
 ## 7. 最终 M4 结论
 
-**M4：通过，可进入发布候选（RC）。**
+**M4：完全通过（AC-01～12 全通过，P0 缺口与 AC-10 全部闭合）。**
 
-- 功能闭环、两个 P0 修复（结局镜头拉远 + 远山显色）、结局延迟与二次通关均有端到端 e2e 实测。
-- AC-01～12 逐项全部通过，**无失败项、无环境阻塞**。
-- 性能在**硬件加速的真实 Chrome + RTX 3060** 上复测达标（中位 165 / 低帧 163.7 FPS），
-  此前软件渲染的 20 FPS 已明确弃用、不作结论。
-- 稳定性（10 分钟）、资源预算、数据解耦均有真实依据。
+- 两个 P0 修复（结局镜头拉远、远山显色）在**集成后的 main** 上有端到端 e2e 实测。
+- 性能在**硬件加速的真实 Chrome 157 + RTX 3060** 上复测达标（中位 165 / 低帧 164.7 FPS），SwiftShader 的 20 FPS 明确弃用、不作结论。
+- 稳定性（10 分钟）、资源预算、数据解耦均有真实依据；无失败项、无环境阻塞。
+- **未创建 release tag、未自行合并或发布**；是否打 tag / 宣布 RC 由集成者按流程决定。
 
 ---
 
-## 8. 复现命令
+## 8. 复现命令（Node 24）
 
 ```bash
-cd D:/obsidian_md/starwater-rc
-npm ci && npm run typecheck && npm test && npm run build
-npm run test:e2e                                              # 32 用例（约 9.3 分钟）
-A6_HW_SAMPLE_SEC=60 npx playwright test --config=playwright.hw.config.ts  # AC-10 真机（60s）
-A6_SAMPLE_SEC=600 A6_SAMPLE_TAG=10min \
-  npx playwright test tests/e2e/a6-perf-collect.spec.ts --project=chromium  # 10 分钟稳定性
+export PATH="/c/Users/Administrator/AppData/Local/Programs/node-v24.22.2-win-x64:$PATH"
+cd D:/obsidian_md/starwater-demo
+
+npm ci
+npm run typecheck && npm run lint && npm run format:check
+npm test && npm run build
+npm run test:e2e
+A6_SAMPLE_SEC=600 A6_SAMPLE_TAG=10min npx playwright test tests/e2e/a6-perf-collect.spec.ts
+npm run test:e2e:hw        # 需真 GPU Chrome；命中 SwiftShader 会失败
 ```
