@@ -134,19 +134,21 @@ test(`AC-10 真机性能复测（${DURATION_SEC}s，硬件加速 Chrome）`, asy
     contentType: "application/json",
   });
 
-  // eslint-disable-next-line no-console
-  console.log("AC10_HW " + JSON.stringify({
-    commit: record.commitHash,
-    gpu: renderer,
-    resolution: record.device.resolution,
-    dpr: device.dpr,
-    durationSec: DURATION_SEC,
-    medianFps,
-    lowFps,
-    maxDrawCalls,
-    maxTriangles,
-    verdict: record.ac10.verdict,
-  }));
+  console.log(
+    "AC10_HW " +
+      JSON.stringify({
+        commit: record.commitHash,
+        gpu: renderer,
+        resolution: record.device.resolution,
+        dpr: device.dpr,
+        durationSec: DURATION_SEC,
+        medianFps,
+        lowFps,
+        maxDrawCalls,
+        maxTriangles,
+        verdict: record.ac10.verdict,
+      }),
+  );
 
   // 预算断言（PRD 11.1）——这是硬阈值，不放宽
   expect(samples.length).toBeGreaterThan(0);

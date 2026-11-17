@@ -55,8 +55,7 @@ async function readCamera(page: Page) {
 async function readReveal(page: Page) {
   return page.evaluate(() => {
     const reveal = window.__STARWATER__?.game.getSystem("reveal") as unknown as
-      | RevealLike
-      | undefined;
+      RevealLike | undefined;
     if (!reveal) return null;
     return {
       finale: reveal.finaleReveal.value,
@@ -161,9 +160,7 @@ test("RC-02：花树完成后远山显色单调推进至 1，reset 归零，不�
   expect(errors).toEqual([]);
 });
 
-test("RC-03：结局 UI 在花树完成后仍延迟出现（≥2s），延迟不被 P0 修复破坏", async ({
-  page,
-}) => {
+test("RC-03：结局 UI 在花树完成后仍延迟出现（≥2s），延迟不被 P0 修复破坏", async ({ page }) => {
   const errors = await boot(page);
   await expect(page.locator(".sw-ending")).toBeHidden();
 
