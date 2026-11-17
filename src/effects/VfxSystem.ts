@@ -7,7 +7,7 @@
  * - 逻辑不等待粒子结束：事件处理是 O(1) 生成，粒子在 update 中自行回收。
  * - 音频属于 P1，本系统完全不依赖它，关闭音频不影响任何流程。
  */
-import { Vector3 } from "three";
+import type { Vector3 } from "three";
 import type { DebugValue, EventBusLike, GameContext, GameSystem } from "../core/contracts";
 import { landmarkPosition } from "../config/world";
 import { PetalEmitter, defaultRandom, type ParticleCounts, type RandomSource } from "./Petals";

@@ -16,6 +16,8 @@ import { createPlayerSystems } from "./player";
 import { RevealSystem } from "./rendering";
 import { createWorldSystem } from "./world";
 import { createNarrativeSystems } from "./narrative";
+import { VfxSystem, type VfxStats } from "./effects";
+import { landmarkPosition } from "./config/world";
 
 declare global {
   interface Window {
@@ -33,6 +35,41 @@ interface SystemsBuild {
 }
 
 /**
+ * VfxSystem 构造时需要事件总线，而总线由 Game 内部创建、只能从 GameContext 拿到。
+ * 这里用一个延迟构造的适配器：init(context) 时才真正 new VfxSystem。
+ * 同时把 `stats` 透出来，供调试面板与 A6 的验收测试读取。
+ */
+interface VfxSystemAdapter extends GameSystem {
+  readonly stats: VfxStats | null;
+}
+
+function createVfxSystem(): VfxSystemAdapter {
+  let inner: VfxSystem | null = null;
+  const adapter: VfxSystemAdapter = {
+    id: "effects-vfx",
+    phase: "effects",
+    init(context): void {
+      inner = new VfxSystem({
+        bus: context.events,
+        treePosition: () => landmarkPosition("tree"),
+      });
+      inner.init(context);
+    },
+    update(deltaSeconds, context): void {
+      inner?.update(deltaSeconds, context);
+    },
+    dispose(): void {
+      inner?.dispose();
+      inner = null;
+    },
+    get stats(): VfxStats | null {
+      return inner?.stats ?? null;
+    },
+  };
+  return adapter;
+}
+
+/**
  * 模块挂载表（集成者独占）。
  * M3：A4 故事/伙伴/星屑/UI + A3 场景 + A2 玩家/镜头 + A1 染色。A5 VFX 合入后继续追加。
  */
@@ -45,12 +82,13 @@ function createSystems(): SystemsBuild {
   });
   // companion → story → HUD/对话/结局/调试（同阶段内按注册顺序执行）
   const narrative = createNarrativeSystems({ player });
+  const vfx = createVfxSystem();
 
   return {
-    // 注册顺序：player → reveal → world → narrative → camera。
+    // 注册顺序：player → reveal → world → narrative → vfx → camera。
     // Game 按 SYSTEM_PHASES 稳定排序，所以 story 一定在 reveal 之前、
     // world 的水彩材质绑定在 RevealSystem 之后（PRD 7.3）。
-    systems: [player, reveal, world, ...narrative, camera],
+    systems: [player, reveal, world, ...narrative, vfx, camera],
     attachColliders(): void {
       player.addColliders(world.getColliders());
     },
