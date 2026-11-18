@@ -3,8 +3,13 @@ export { VfxSystem, type VfxSystemOptions, type VfxStats } from "./VfxSystem";
 export {
   PetalEmitter,
   defaultRandom,
+  PETAL_LAYERS,
+  PETAL_OVERLAY_AREA_RATIO_CAP,
   type ParticleCounts,
   type PetalEmitterOptions,
+  type PetalLayerCounts,
+  type PetalLayerId,
+  type PetalLayerSpec,
   type RandomSource,
 } from "./Petals";
 export { RippleEmitter, type RippleEmitterOptions } from "./Ripples";
