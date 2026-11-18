@@ -39,7 +39,13 @@ export {
   isInStreamWaterZone,
   GRASS_INSTANCE_COUNT,
   FLOWER_INSTANCE_COUNT,
+  GRASS_CHUNK_GRID,
+  GRASS_LOD_DISTANCE,
+  type GrassLodChunk,
+  type VegetationBuild,
 } from "./Vegetation";
+export { buildPathGroup, distanceToPath, pathSurfaceHeight, PATH_WIDTH, PATH_LIFT } from "./Path";
+export { buildOrdinaryTreeGroup, ORDINARY_TREE_COUNT, TREE_TYPE_COUNTS } from "./Trees";
 export {
   buildLandmarkGroup,
   TREE_TRUNK_COLLIDER_RADIUS,

@@ -13,7 +13,6 @@ import {
   steppingStonePositions,
   STREAM_WATER_LEVEL,
 } from "../../../src/world/terrainHeight";
-import { GRASS_INSTANCE_COUNT, FLOWER_INSTANCE_COUNT } from "../../../src/world/Vegetation";
 import { WORLD_MATERIAL_APPEARANCE, WORLD_MATERIAL_KINDS } from "../../../src/world/worldMaterials";
 import { TREE_TRUNK_COLLIDER_RADIUS } from "../../../src/world/Landmarks";
 import { createWorldSystem } from "../../../src/world/World";
@@ -41,6 +40,8 @@ describe("WorldSystem · 场景构建", () => {
     expect(names).toContain("world-terrain-group");
     expect(names).toContain("world-vegetation-group");
     expect(names).toContain("world-landmark-group");
+    expect(names).toContain("world-path-group");
+    expect(names).toContain("world-ordinary-tree-group");
 
     const terrain = context.worldRoot.getObjectByName("terrain-mesh");
     expect(terrain).toBeDefined();
@@ -48,8 +49,10 @@ describe("WorldSystem · 场景构建", () => {
     expect(water).toBeDefined();
     const tree = context.worldRoot.getObjectByName("flower-tree");
     expect(tree).toBeDefined();
-    const grass = context.worldRoot.getObjectByName("grass-field");
+    const grass = context.worldRoot.getObjectByName("grass-chunk-1-1-near");
     expect(grass).toBeInstanceOf(InstancedMesh);
+    const path = context.worldRoot.getObjectByName("world-path");
+    expect(path).toBeDefined();
 
     world.dispose();
     expect(context.worldRoot.children.length).toBe(0);
@@ -95,19 +98,28 @@ describe("WorldSystem · 场景构建", () => {
     world.dispose();
   });
 
-  it("性能预算：三角面与实例数在 PRD 11.1 范围内", () => {
+  it("性能预算：V0.2 三角面≤300k、草/花密度达标、world draw call≤150", () => {
     const context = createContext();
     const world = createWorldSystem();
     world.init(context);
 
-    expect(world.getTriangles()).toBeLessThan(100_000); // PRD 上限 350k，实测约 45k
-    // 实例 = 草 720 + 花茎 150 + 花头 150 + 远山 ≤9
-    expect(world.getInstances()).toBeGreaterThanOrEqual(
-      GRASS_INSTANCE_COUNT + FLOWER_INSTANCE_COUNT * 2,
-    );
-    expect(world.getInstances()).toBeLessThan(
-      GRASS_INSTANCE_COUNT + FLOWER_INSTANCE_COUNT * 2 + 20,
-    );
+    // V0.2 预算（PRD 11.1 上限 350k，本轮目标 ≤300k）。
+    expect(world.getTriangles()).toBeGreaterThan(0);
+    expect(world.getTriangles()).toBeLessThanOrEqual(300_000);
+    // 密度：草 1.2万～2万簇、花 700～1200 朵。
+    expect(world.getGrassPlaced()).toBeGreaterThanOrEqual(12_000);
+    expect(world.getGrassPlaced()).toBeLessThanOrEqual(20_000);
+    expect(world.getFlowerPlaced()).toBeGreaterThanOrEqual(700);
+    expect(world.getFlowerPlaced()).toBeLessThanOrEqual(1200);
+    // 实例数 = 可见草簇 + 花茎/花头 + 树/山实例（LOD 隐藏层不重复计）。
+    expect(world.getInstances()).toBeGreaterThanOrEqual(world.getGrassPlaced());
+    expect(world.getInstances()).toBeLessThan(60_000);
+    // world 可见网格数（draw call 代理）≤150。
+    let visibleMeshes = 0;
+    context.worldRoot.traverse((object) => {
+      if ((object as Mesh).isMesh && object.visible) visibleMeshes += 1;
+    });
+    expect(visibleMeshes).toBeLessThanOrEqual(150);
     world.dispose();
   });
 
