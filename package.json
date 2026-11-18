@@ -1,8 +1,8 @@
 {
-  "name": "starwater-demo",
+  "name": "hoshino-realm-of-watercolor",
   "private": true,
-  "version": "0.1.0",
-  "description": "Hoshino: Realm of Watercolor - 3D narrative exploration demo (A0 skeleton)",
+  "version": "0.1.0-rc.1",
+  "description": "Hoshino: Realm of Watercolor - a watercolor 3D narrative exploration demo built with TypeScript, Vite and Three.js.",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

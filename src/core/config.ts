@@ -5,7 +5,7 @@
 import type { EngineSettings } from "./contracts";
 
 export const APP_NAME = "Hoshino: Realm of Watercolor";
-export const APP_VERSION = "0.1.0-a0";
+export const APP_VERSION = "0.1.0-rc.1";
 
 /** 单帧 delta 上限（PRD 7.3：0.05s）。 */
 export const MAX_DELTA_SECONDS = 0.05;
