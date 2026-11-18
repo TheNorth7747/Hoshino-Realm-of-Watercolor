@@ -29,8 +29,10 @@ import { disposeMaterial, disposeObject3D } from "../core/dispose";
 import { createWatercolorMaterial, type RevealUniforms } from "../rendering/WatercolorMaterial";
 import type { CollisionCircle } from "../player/collision";
 import { buildTerrainGroup } from "./Terrain";
-import { buildVegetationGroup } from "./Vegetation";
+import { buildVegetationGroup, GRASS_LOD_DISTANCE, type GrassLodChunk } from "./Vegetation";
 import { buildLandmarkGroup } from "./Landmarks";
+import { buildPathGroup } from "./Path";
+import { buildOrdinaryTreeGroup } from "./Trees";
 import { STREAM_WATER_LEVEL } from "./terrainHeight";
 import {
   WORLD_MATERIAL_APPEARANCE,
@@ -55,6 +57,9 @@ export class WorldSystem implements GameSystem {
 
   private triangleCount = 0;
   private instanceCount = 0;
+  private grassPlaced = 0;
+  private flowerPlaced = 0;
+  private grassLod: readonly GrassLodChunk[] = [];
   private colliders: readonly CollisionCircle[] = [];
   private materialsBound = false;
   private statSource: DebugStatSource | null = null;
@@ -70,12 +75,27 @@ export class WorldSystem implements GameSystem {
     const terrainBuild = buildTerrainGroup(accessor);
     const vegetationBuild = buildVegetationGroup(accessor);
     const landmarkBuild = buildLandmarkGroup(accessor);
+    const pathBuild = buildPathGroup(accessor);
+    const treeBuild = buildOrdinaryTreeGroup(accessor);
 
     this.triangleCount =
-      terrainBuild.triangleCount + vegetationBuild.triangleCount + landmarkBuild.triangleCount;
+      terrainBuild.triangleCount +
+      vegetationBuild.triangleCount +
+      landmarkBuild.triangleCount +
+      pathBuild.triangleCount +
+      treeBuild.triangleCount;
     this.colliders = landmarkBuild.colliders;
+    this.grassLod = vegetationBuild.grassLod;
+    this.grassPlaced = vegetationBuild.grassPlaced;
+    this.flowerPlaced = vegetationBuild.flowerPlaced;
 
-    this.topGroups.push(terrainBuild.group, vegetationBuild.group, landmarkBuild.group);
+    this.topGroups.push(
+      terrainBuild.group,
+      vegetationBuild.group,
+      landmarkBuild.group,
+      pathBuild.group,
+      treeBuild.group,
+    );
     for (const group of this.topGroups) {
       context.worldRoot.add(group);
       this.collectKindMeshes(group);
@@ -86,10 +106,28 @@ export class WorldSystem implements GameSystem {
     this.unsubscribeFns.push(context.debug.registerStatSource(this.statSource));
   }
 
-  update(_deltaSeconds: number, _context: GameContext): void {
-    if (this.materialsBound) return;
-    const uniforms = this.revealUniformsProvider?.() ?? null;
-    if (uniforms) this.bindRevealMaterials(uniforms);
+  update(_deltaSeconds: number, context: GameContext): void {
+    if (!this.materialsBound) {
+      const uniforms = this.revealUniformsProvider?.() ?? null;
+      if (uniforms) this.bindRevealMaterials(uniforms);
+    }
+    this.updateGrassLod(context.camera.position);
+  }
+
+  /** 草分块 LOD：相机近的块用三叶簇，远的块用单叶；视锥剔除由包围球承担。 */
+  private updateGrassLod(cameraPosition: { x: number; y: number; z: number }): void {
+    let changed = false;
+    for (const chunk of this.grassLod) {
+      const dx = cameraPosition.x - chunk.center.x;
+      const dz = cameraPosition.z - chunk.center.z;
+      const near = Math.hypot(dx, dz) < GRASS_LOD_DISTANCE;
+      if (chunk.near.visible !== near) {
+        chunk.near.visible = near;
+        chunk.far.visible = !near;
+        changed = true;
+      }
+    }
+    if (changed) this.countInstances();
   }
 
   dispose(): void {
@@ -103,6 +141,9 @@ export class WorldSystem implements GameSystem {
     this.materials.clear();
     this.kindMeshes.clear();
     this.colliders = [];
+    this.grassLod = [];
+    this.grassPlaced = 0;
+    this.flowerPlaced = 0;
     this.materialsBound = false;
     this.statSource = null;
   }
@@ -123,6 +164,16 @@ export class WorldSystem implements GameSystem {
 
   getInstances(): number {
     return this.instanceCount;
+  }
+
+  /** 实际放置的草簇数（V0.2 密度验收）。 */
+  getGrassPlaced(): number {
+    return this.grassPlaced;
+  }
+
+  /** 实际放置的花头数（V0.2 密度验收）。 */
+  getFlowerPlaced(): number {
+    return this.flowerPlaced;
   }
 
   // ---- 内部 ----
@@ -170,6 +221,7 @@ export class WorldSystem implements GameSystem {
     this.instanceCount = 0;
     for (const meshes of this.kindMeshes.values()) {
       for (const mesh of meshes) {
+        if (!mesh.visible) continue; // LOD 隐藏层不重复计数
         const instanced = mesh as InstancedMesh;
         if (typeof instanced.count === "number" && instanced.isInstancedMesh) {
           this.instanceCount += instanced.count;
@@ -213,6 +265,8 @@ export class WorldSystem implements GameSystem {
         worldTriangles: this.triangleCount,
         worldInstances: this.instanceCount,
         worldColliders: this.colliders.length,
+        worldGrass: this.grassPlaced,
+        worldFlowers: this.flowerPlaced,
         streamWaterLevel: STREAM_WATER_LEVEL,
         revealBound: this.materialsBound,
       }),

@@ -12,7 +12,7 @@
  * `steppingStonePositions()`（由 config 的 STREAM 数量/间距推导），这里只负责
  * 在其上摆石块几何体；高度取自地形采样，因此石块顶面与可通过的河槽凸起一致。
  */
-import { CylinderGeometry, Group, IcosahedronGeometry, Mesh } from "three";
+import { CylinderGeometry, Group, IcosahedronGeometry, InstancedMesh, Mesh, Object3D } from "three";
 import { LANDMARKS } from "../config/world";
 import type { CollisionCircle } from "../player/collision";
 import { sampleTerrainHeight, steppingStonePositions } from "./terrainHeight";
@@ -71,44 +71,73 @@ export function buildLandmarkGroup(materials: MaterialAccessor): LandmarkBuildRe
   const treeY = sampleTerrainHeight(treeX, treeZ);
   tree.position.set(treeX, treeY, treeZ);
 
-  const trunk = new Mesh(new CylinderGeometry(0.28, 0.42, 2.9, 7), materials("treeTrunk"));
+  const trunk = new Mesh(new CylinderGeometry(0.3, 0.46, 3.4, 7), materials("treeTrunk"));
   trunk.name = "flower-tree-trunk";
   tagWorldMaterialKind(trunk, "treeTrunk");
-  trunk.position.y = 1.45;
-  trunk.rotation.z = 0.06;
+  trunk.position.y = 1.7;
+  trunk.rotation.z = 0.05;
   tree.add(trunk);
 
-  // 三根主枝：细圆锥倾斜，撑起树冠轮廓。
-  const branchAngles = [2.4, 4.1, 5.5];
-  for (let i = 0; i < branchAngles.length; i += 1) {
-    const angle = branchAngles[i] ?? 0;
-    const branch = new Mesh(new CylinderGeometry(0.06, 0.14, 1.7, 5), materials("treeTrunk"));
-    branch.name = `flower-tree-branch-${i}`;
-    tagWorldMaterialKind(branch, "treeTrunk");
-    branch.position.set(Math.cos(angle) * 0.55, 2.6, Math.sin(angle) * 0.55);
-    branch.rotation.set(Math.sin(angle) * 0.5, 0, -Math.cos(angle) * 0.5);
-    tree.add(branch);
+  // 五根清晰主枝（实例化，1 draw call）：从树干顶向外上方撑开伞骨。
+  const branchGeometry = new CylinderGeometry(0.07, 0.16, 2.3, 5);
+  branchGeometry.translate(0, 1.15, 0);
+  const BRANCH_COUNT = 5;
+  const branches = new InstancedMesh(branchGeometry, materials("treeTrunk"), BRANCH_COUNT);
+  branches.name = "flower-tree-branches";
+  tagWorldMaterialKind(branches, "treeTrunk");
+  const branchDummy = new Object3D();
+  for (let i = 0; i < BRANCH_COUNT; i += 1) {
+    const angle = (i / BRANCH_COUNT) * Math.PI * 2 + 0.4;
+    branchDummy.position.set(Math.cos(angle) * 0.3, 2.7, Math.sin(angle) * 0.3);
+    branchDummy.rotation.set(Math.sin(angle) * 0.7, 0, -Math.cos(angle) * 0.7);
+    branchDummy.scale.setScalar(1);
+    branchDummy.updateMatrix();
+    branches.setMatrixAt(i, branchDummy.matrix);
   }
+  branches.instanceMatrix.needsUpdate = true;
+  tree.add(branches);
 
-  // 树冠：4 个低面数球体簇（粉色由染色遮罩揭示；线稿态由 A1 shader 呈现）。
-  const canopySpecs: ReadonlyArray<{ r: number; x: number; y: number; z: number }> = [
-    { r: 1.75, x: 0, y: 3.6, z: 0 },
-    { r: 1.15, x: 1.0, y: 3.0, z: 0.5 },
-    { r: 1.05, x: -1.05, y: 3.1, z: -0.45 },
-    { r: 0.85, x: 0.25, y: 4.5, z: 0.15 },
+  // 伞形宽树冠：多圈小叶簇实例化（中心高、边缘低），摆脱大球拼接感。
+  const clusterGeometry = new IcosahedronGeometry(1, 0);
+  const canopyRings: ReadonlyArray<{ rad: number; count: number; y: number }> = [
+    { rad: 0, count: 1, y: 4.6 },
+    { rad: 1.1, count: 8, y: 4.35 },
+    { rad: 2.0, count: 14, y: 4.05 },
+    { rad: 2.9, count: 18, y: 3.7 },
+    { rad: 3.4, count: 12, y: 3.35 },
   ];
-  for (let i = 0; i < canopySpecs.length; i += 1) {
-    const spec = canopySpecs[i];
-    if (!spec) continue;
-    const canopy = new Mesh(new IcosahedronGeometry(spec.r, 1), materials("treeCanopy"));
-    canopy.name = `flower-tree-canopy-${i}`;
-    tagWorldMaterialKind(canopy, "treeCanopy");
-    canopy.position.set(spec.x, spec.y, spec.z);
-    canopy.rotation.y = uniformRange(random, 0, Math.PI);
-    tree.add(canopy);
+  const clusters: Array<{ x: number; y: number; z: number; r: number }> = [];
+  for (const ring of canopyRings) {
+    for (let i = 0; i < ring.count; i += 1) {
+      const angle = (i / ring.count) * Math.PI * 2 + ring.rad;
+      const rad = ring.rad + uniformRange(random, -0.18, 0.18);
+      clusters.push({
+        x: Math.cos(angle) * rad,
+        y: ring.y + uniformRange(random, -0.15, 0.25),
+        z: Math.sin(angle) * rad,
+        r: ring.rad === 0 ? 1.15 : uniformRange(random, 0.55, 0.95),
+      });
+    }
   }
+  const canopy = new InstancedMesh(clusterGeometry, materials("treeCanopy"), clusters.length);
+  canopy.name = "flower-tree-canopy";
+  tagWorldMaterialKind(canopy, "treeCanopy");
+  const canopyDummy = new Object3D();
+  clusters.forEach((cluster, i) => {
+    canopyDummy.position.set(cluster.x, cluster.y, cluster.z);
+    canopyDummy.scale.setScalar(cluster.r);
+    canopyDummy.rotation.set(0, uniformRange(random, 0, Math.PI), 0);
+    canopyDummy.updateMatrix();
+    canopy.setMatrixAt(i, canopyDummy.matrix);
+  });
+  canopy.instanceMatrix.needsUpdate = true;
+  canopy.computeBoundingSphere();
+  tree.add(canopy);
 
-  triangleCount += countGroupTriangles(tree);
+  triangleCount +=
+    geometryTriangleCount(trunk.geometry) +
+    geometryTriangleCount(branchGeometry) * BRANCH_COUNT +
+    geometryTriangleCount(clusterGeometry) * clusters.length;
   colliders.push({ x: treeX, z: treeZ, radius: TREE_TRUNK_COLLIDER_RADIUS });
   group.add(tree);
 
@@ -162,12 +191,12 @@ export function buildLandmarkGroup(materials: MaterialAccessor): LandmarkBuildRe
   const stones = steppingStonePositions();
   stones.forEach((stone, index) => {
     const y = sampleTerrainHeight(stone.x, stone.z);
-    // 石面略高于河槽凸起顶面一半，形成明确的“可踩”视觉，同时不阻断水槽。
+    // 更大更扁的石面 + 略抬高，形成明确“可踩”读感（V0.2 踏石可读性），不阻断水槽。
     const slab = new Mesh(new IcosahedronGeometry(0.62, 0), materials("rock"));
     slab.name = `stepping-stone-${index}`;
     tagWorldMaterialKind(slab, "rock");
-    slab.position.set(stone.x, y + 0.06, stone.z);
-    slab.scale.set(1.05, 0.32, 0.95);
+    slab.position.set(stone.x, y + 0.1, stone.z);
+    slab.scale.set(1.3, 0.42, 1.15);
     slab.rotation.y = uniformRange(random, 0, Math.PI * 2);
     triangleCount += geometryTriangleCount(slab.geometry);
     group.add(slab);

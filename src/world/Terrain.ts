@@ -11,13 +11,14 @@
  * A1 水彩材质）；每个网格用 userData["worldMaterialKind"] 标记种类。
  */
 import {
+  BufferGeometry,
   ConeGeometry,
+  Float32BufferAttribute,
   Group,
   InstancedMesh,
   Mesh,
   PlaneGeometry,
   Object3D,
-  type BufferGeometry,
   type Material,
 } from "three";
 import { STREAM, WORLD_BOUNDS } from "../config/world";
@@ -99,6 +100,11 @@ export function buildTerrainGroup(materials: MaterialAccessor): WorldMeshBuild {
   triangleCount += geometryTriangleCount(waterGeometry);
   group.add(water);
 
+  // ---- 溪流水纹 + 岸线笔触（V0.2 可读性，保持原河道） ----
+  const strokes = buildStreamStrokes(materials);
+  triangleCount += strokes.triangleCount;
+  group.add(strokes.group);
+
   // ---- 远山 ----
   const mountains = buildMountainRing(materials);
   triangleCount += mountains.triangleCount;
@@ -141,6 +147,85 @@ function buildMountainRing(materials: MaterialAccessor): WorldMeshBuild {
   mesh.instanceMatrix.needsUpdate = true;
   triangleCount += geometryTriangleCount(geometry) * placed;
   group.add(mesh);
+
+  return { group, triangleCount };
+}
+
+/**
+ * 溪流水纹（水面高光细条）+ 岸线笔触（岸缘细带）。
+ * 不改变河道/水面几何（保持原河道与既有断言），仅叠加可读性笔触。
+ */
+function buildStreamStrokes(materials: MaterialAccessor): WorldMeshBuild {
+  const group = new Group();
+  group.name = "stream-strokes";
+  const random = mulberry32(20261121);
+  let triangleCount = 0;
+
+  // 水纹：若干沿 X 的细长三角带，略高于水面。
+  const waterPositions: number[] = [];
+  const waterIndices: number[] = [];
+  const STROKE_COUNT = 6;
+  for (let i = 0; i < STROKE_COUNT; i += 1) {
+    const length = uniformRange(random, 10, 26);
+    const centerX = uniformRange(random, -30, 30);
+    const z = STREAM.centerZ + uniformRange(random, -1.4, 1.4);
+    const y = STREAM_WATER_LEVEL + 0.03;
+    const halfWidth = 0.06;
+    const base = waterPositions.length / 3;
+    waterPositions.push(
+      centerX - length / 2,
+      y,
+      z - halfWidth,
+      centerX + length / 2,
+      y,
+      z - halfWidth,
+      centerX - length / 2,
+      y,
+      z + halfWidth,
+      centerX + length / 2,
+      y,
+      z + halfWidth,
+    );
+    waterIndices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+  }
+  const waterStrokeGeometry = new BufferGeometry();
+  waterStrokeGeometry.setAttribute("position", new Float32BufferAttribute(waterPositions, 3));
+  waterStrokeGeometry.setIndex(waterIndices);
+  waterStrokeGeometry.computeVertexNormals();
+  const waterStrokes = new Mesh(waterStrokeGeometry, materials("water"));
+  waterStrokes.name = "stream-water-strokes";
+  tagWorldMaterialKind(waterStrokes, "water");
+  triangleCount += geometryTriangleCount(waterStrokeGeometry);
+  group.add(waterStrokes);
+
+  // 岸线笔触：两岸缘细带，贴地略抬升，读作铅笔岸线。
+  const bankPositions: number[] = [];
+  const bankIndices: number[] = [];
+  const halfSpan = WORLD_BOUNDS.maxX;
+  const step = 4;
+  for (const side of [-1, 1]) {
+    const edgeZ = STREAM.centerZ + side * (STREAM.widthMeters / 2 + 0.1);
+    const start = bankPositions.length / 3;
+    let row = 0;
+    for (let x = -halfSpan; x <= halfSpan; x += step) {
+      const y = sampleTerrainHeight(x, edgeZ) + 0.04;
+      bankPositions.push(x, y, edgeZ - 0.14, x, y, edgeZ + 0.14);
+      if (row > 0) {
+        const a = start + (row - 1) * 2;
+        bankIndices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+      row += 1;
+    }
+  }
+  const bankGeometry = new BufferGeometry();
+  bankGeometry.setAttribute("position", new Float32BufferAttribute(bankPositions, 3));
+  bankGeometry.setIndex(bankIndices);
+  bankGeometry.computeVertexNormals();
+  const bankStrokes = new Mesh(bankGeometry, materials("rock"));
+  bankStrokes.name = "stream-bank-strokes";
+  tagWorldMaterialKind(bankStrokes, "rock");
+  triangleCount += geometryTriangleCount(bankGeometry);
+  group.add(bankStrokes);
 
   return { group, triangleCount };
 }

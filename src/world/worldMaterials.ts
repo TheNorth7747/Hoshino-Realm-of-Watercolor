@@ -15,15 +15,34 @@ import type { RevealUniforms } from "../rendering/WatercolorMaterial";
 
 /** 世界可染色材质的种类（与世界网格一一对应）。 */
 export type WorldMaterialKind =
-  "terrain" | "grass" | "flower" | "water" | "treeTrunk" | "treeCanopy" | "rock" | "mountain";
+  | "terrain"
+  | "grass"
+  | "flower"
+  | "flowerRed"
+  | "flowerYellow"
+  | "path"
+  | "water"
+  | "treeTrunk"
+  | "treeTrunkWhite"
+  | "treeCanopy"
+  | "treeCanopyGreen"
+  | "treeWillow"
+  | "rock"
+  | "mountain";
 
 export const WORLD_MATERIAL_KINDS: readonly WorldMaterialKind[] = [
   "terrain",
   "grass",
   "flower",
+  "flowerRed",
+  "flowerYellow",
+  "path",
   "water",
   "treeTrunk",
+  "treeTrunkWhite",
   "treeCanopy",
+  "treeCanopyGreen",
+  "treeWillow",
   "rock",
   "mountain",
 ];
@@ -45,9 +64,15 @@ export const WORLD_MATERIAL_APPEARANCE: Readonly<
   terrain: { color: 0x9ec98a, roughness: 0.96 },
   grass: { color: 0x86b873, roughness: 0.95, flatShading: true },
   flower: { color: 0x6f8fd6, roughness: 0.8, flatShading: true },
+  flowerRed: { color: 0xc84a36, roughness: 0.8, flatShading: true },
+  flowerYellow: { color: 0xdcb944, roughness: 0.8, flatShading: true },
+  path: { color: 0xc7ad72, roughness: 0.97 },
   water: { color: 0x7fa8c9, roughness: 0.35, transparent: true, opacity: 0.55 },
   treeTrunk: { color: 0x8a6f5c, roughness: 0.92, flatShading: true },
+  treeTrunkWhite: { color: 0xe6e3da, roughness: 0.9, flatShading: true },
   treeCanopy: { color: 0xe8a7bd, roughness: 0.85, flatShading: true },
+  treeCanopyGreen: { color: 0x7fa25a, roughness: 0.9, flatShading: true },
+  treeWillow: { color: 0x9cb86a, roughness: 0.9, flatShading: true },
   rock: { color: 0x8d8f95, roughness: 0.9, flatShading: true },
   mountain: { color: 0xa9b8c6, roughness: 0.95, flatShading: true },
 });
