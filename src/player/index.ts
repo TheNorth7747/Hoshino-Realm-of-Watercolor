@@ -49,12 +49,31 @@ export {
   CAMERA_DRAG_SENSITIVITY,
   CAMERA_WHEEL_STEP,
   CAMERA_TERRAIN_CLEARANCE,
+  CAMERA_LOOK_AHEAD_DEFAULT,
+  CAMERA_LOOK_AHEAD_RATIO,
   CAMERA_FINALE_DISTANCE,
   CAMERA_FINALE_PITCH,
   CAMERA_FINALE_RATE,
   type CameraRigOptions,
 } from "./CameraRig";
-export { createPlayerPlaceholderMesh, PLAYER_PLACEHOLDER_NAME } from "./playerPlaceholder";
+export {
+  createHeroMesh,
+  createPlayerPlaceholderMesh,
+  HERO_COLORS,
+  HERO_HEIGHT,
+  HERO_NAME,
+  PLAYER_PLACEHOLDER_NAME,
+  type HeroPartName,
+  type HeroParts,
+} from "./heroCharacter";
+export {
+  HeroRig,
+  HERO_IDLE_SPEED,
+  HERO_RUN_SPEED,
+  resolveMotionState,
+  type HeroMotionState,
+  type HeroRigState,
+} from "./HeroRig";
 
 export interface PlayerSystems {
   readonly input: InputState;
