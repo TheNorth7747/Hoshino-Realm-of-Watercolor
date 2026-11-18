@@ -115,8 +115,10 @@ describe("结局运镜 · 平滑变化（禁止瞬移/硬切）", () => {
       const prev = distances[i - 1] ?? 0;
       const curr = distances[i] ?? 0;
       expect(curr).toBeGreaterThanOrEqual(prev - 1e-9); // 单调拉远
-      // 指数阻尼首帧步进 ≈ 跨度(5m) × (1-e^{-2.2/60}) ≈ 0.18m，远小于硬切。
-      expect(curr - prev).toBeLessThan(0.2);
+      // 指数阻尼首帧步进 ≈ 跨度(13-5=8m) × (1-e^{-2.2/60}) ≈ 0.29m：
+      // 相对 8m 总跨度不足 4%，仍是平滑推轨而非硬切。
+      expect(curr - prev).toBeLessThan(0.32);
+      expect(curr - prev).toBeLessThan((CAMERA_FINALE_DISTANCE - CAMERA_DEFAULT_DISTANCE) * 0.05);
     }
     // 首帧不会一步到位。
     expect(distances[0]).toBeLessThan(CAMERA_FINALE_DISTANCE - 1);
@@ -175,15 +177,19 @@ describe("结局运镜 · 保留朝向（花树/玩家/染色路径留在画面�
     }
   });
 
-  it("镜头始终看向跟随点（玩家），玩家留在画面中心", () => {
+  it("镜头始终看向注视点（前看构图），玩家保持在画面内", () => {
     const { context, rig } = createRig();
     context.events.emit("story:completed", { nodeId: "tree" });
     runFrames(rig, context, 240);
 
     const camera = context.camera;
     const view = camera.getWorldDirection(new Vector3());
-    const toFollow = rig.getFollowPoint().clone().sub(camera.position).normalize();
-    expect(view.dot(toFollow)).toBeGreaterThan(0.999);
+    // V0.2：注视点 = 跟随点 + 前看偏移，角色因此落在画面中下部。
+    const toTarget = rig.getLookTarget().clone().sub(camera.position).normalize();
+    expect(view.dot(toTarget)).toBeGreaterThan(0.999);
+    // 跟随点（玩家）与视线的夹角仍在窄视场内：玩家不会离开画面。
+    const toPlayer = rig.getFollowPoint().clone().sub(camera.position).normalize();
+    expect(view.dot(toPlayer)).toBeGreaterThan(0.9);
   });
 });
 

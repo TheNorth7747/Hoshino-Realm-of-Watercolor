@@ -31,7 +31,8 @@ import { spawnPosition } from "../config/world";
 import { CollisionWorld, type CollisionCircle } from "./collision";
 import { InputState } from "./InputState";
 import { DomInputBinder } from "./DomInputBinder";
-import { createPlayerPlaceholderMesh } from "./playerPlaceholder";
+import { createHeroMesh, type HeroParts } from "./heroCharacter";
+import { HeroRig, type HeroRigState } from "./HeroRig";
 
 /** 常规移动速度（PRD 9.3：3.5～4.5 m/s）。 */
 export const PLAYER_MOVE_SPEED = 4.2;
@@ -75,6 +76,9 @@ export class PlayerController implements GameSystem, PlayerSource {
 
   private readonly snapshot: PlayerSnapshot;
   private mesh: Group | null = null;
+  /** V0.2 角色骨架与动作系统（null 表示未初始化/已释放）。 */
+  private heroParts: HeroParts | null = null;
+  private heroRig: HeroRig | null = null;
   private binder: DomInputBinder | null = null;
   private readonly unsubscribeFns: Array<() => void> = [];
 
@@ -107,7 +111,9 @@ export class PlayerController implements GameSystem, PlayerSource {
     this.headingRadians = Math.PI;
     this.syncSnapshot();
 
-    this.mesh = createPlayerPlaceholderMesh();
+    this.heroParts = createHeroMesh();
+    this.heroRig = new HeroRig(this.heroParts);
+    this.mesh = this.heroParts.root;
     this.mesh.position.copy(this.position);
     this.mesh.rotation.y = this.headingRadians;
     context.worldRoot.add(this.mesh);
@@ -183,6 +189,9 @@ export class PlayerController implements GameSystem, PlayerSource {
       this.mesh.position.copy(this.position);
       this.mesh.rotation.y = this.headingRadians;
     }
+    // 角色动作由实际速度驱动（idle / walk / run）：传入的 speed 与 snapshot.speed 同源，
+    // 不存在与真实移动脱节的“空转动画”。
+    this.heroRig?.update(step, speed);
     this.syncSnapshot();
   }
 
@@ -195,11 +204,18 @@ export class PlayerController implements GameSystem, PlayerSource {
       disposeObject3D(this.mesh);
       this.mesh = null;
     }
+    this.heroParts = null;
+    this.heroRig = null;
     this.colliders.clear();
   }
 
   getPlayerSnapshot(): PlayerSnapshot {
     return this.snapshot;
+  }
+
+  /** V0.2 角色动作状态（调试面板与测试读取；未初始化时返回 null）。 */
+  getHeroMotionState(): HeroRigState | null {
+    return this.heroRig?.getState() ?? null;
   }
 
   /** 对话期间限速钩子（PRD 9.3）：关闭时输入轴读零；恢复后输入立即可用。 */
@@ -224,6 +240,7 @@ export class PlayerController implements GameSystem, PlayerSource {
     this.velocity.set(0, 0, 0);
     this.headingRadians = Math.PI;
     this.input.clearKeys();
+    this.heroRig?.reset();
     if (this.mesh) {
       this.mesh.position.copy(this.position);
       this.mesh.rotation.y = this.headingRadians;
@@ -269,6 +286,9 @@ export class PlayerController implements GameSystem, PlayerSource {
         speed: round4(this.snapshot.speed),
         grounded: this.snapshot.grounded,
         colliders: this.colliders.count,
+        heroMotion: this.heroRig?.getState().motion ?? "none",
+        heroPhase: round4(this.heroRig?.getState().phase ?? 0),
+        heroCloakSwing: round4(this.heroRig?.getState().cloakSwing ?? 0),
       }),
     };
   }

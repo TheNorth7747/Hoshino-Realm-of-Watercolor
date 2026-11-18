@@ -24,14 +24,28 @@ import type { DebugStatSource, GameContext, GameSystem, PlayerSource } from "../
 import { clampDelta } from "../core/config";
 import type { InputState } from "./InputState";
 
-/** 默认镜头距离（米）。 */
-export const CAMERA_DEFAULT_DISTANCE = 8;
+/** 默认镜头距离（米）。V0.2：8 → 5，贴近参考视频的中景构图。 */
+export const CAMERA_DEFAULT_DISTANCE = 5;
 export const CAMERA_MIN_DISTANCE = 3;
 export const CAMERA_MAX_DISTANCE = 14;
-/** 默认俯仰角（弧度，约 24°，镜头略高于头顶向下看）。 */
-export const CAMERA_DEFAULT_PITCH = 0.42;
+/**
+ * 默认俯仰角（弧度）。V0.2：0.42（≈24°，偏俯视）→ 0.24（≈13.8°），
+ * 降低俯视感，地平线从画面顶部区回到上部偏中。
+ */
+export const CAMERA_DEFAULT_PITCH = 0.24;
 export const CAMERA_MIN_PITCH = 0.08;
 export const CAMERA_MAX_PITCH = 1.15;
+/**
+ * 前看距离（米，默认距离下）：注视点在跟随点前方沿镜头水平前向偏移 1.6m，
+ * 使角色落到画面中下部、地平线不再贴近顶部（V0.2 要求 1～2m）。
+ * 偏移随镜头距离等比缩放（lookAheadDistance()），缩放后构图保持一致。
+ */
+export const CAMERA_LOOK_AHEAD_DEFAULT = 1.6;
+/** 前看 = 距离 × 该比例（1.6 / 5 = 0.32）。 */
+export const CAMERA_LOOK_AHEAD_RATIO = 0.32;
+/** 前看偏移的绝对上下限，避免极端缩放下构图跑偏。 */
+const LOOK_AHEAD_MIN = 0.6;
+const LOOK_AHEAD_MAX = 5;
 /** 拖拽灵敏度（弧度/像素）。 */
 export const CAMERA_DRAG_SENSITIVITY = 0.005;
 /** 滚轮缩放系数：每像素 deltaY 对应的距离乘性因子。 */
@@ -39,9 +53,14 @@ export const CAMERA_WHEEL_STEP = 0.0015;
 /** 跟随点与距离的阻尼速率（1/s）。 */
 export const CAMERA_FOLLOW_RATE = 8;
 export const CAMERA_ZOOM_RATE = 8;
-/** 结局运镜：目标距离（米）与俯角（弧度）。距离仍在上限内，俯角适度提高。 */
+/**
+ * 结局运镜：目标距离（米）与俯角（弧度）。
+ * 距离沿用 13m 验收契约不修改（rc-finale-acceptance 依赖它）；
+ * V0.2 把俯角从 0.62 降到 0.40，避免 13m 距离下变成顶视图，
+ * 同时前看随距离等比放大到约 4.2m，让花树与染色路径留在画面中部。
+ */
 export const CAMERA_FINALE_DISTANCE = 13;
-export const CAMERA_FINALE_PITCH = 0.62;
+export const CAMERA_FINALE_PITCH = 0.4;
 /**
  * 结局运镜阻尼速率（1/s）。刻意比常规缩放慢：指数阻尼的时间常数约 1/rate，
  * 2.2 对应 ~0.45s 时间常数、约 1.5s 视觉完成，首帧步进 <0.2m，无硬切感。
@@ -61,6 +80,8 @@ export interface CameraRigOptions {
   readonly input: InputState;
   readonly distance?: number | undefined;
   readonly pitch?: number | undefined;
+  /** 前看距离（米）；缺省按 CAMERA_LOOK_AHEAD_DEFAULT 与距离等比缩放。 */
+  readonly lookAhead?: number | undefined;
 }
 
 export class CameraRig implements GameSystem {
@@ -71,12 +92,16 @@ export class CameraRig implements GameSystem {
   private readonly input: InputState;
   private readonly defaultDistance: number;
   private readonly defaultPitch: number;
+  /** 显式前看距离：null 表示按距离等比缩放（默认行为）。 */
+  private readonly fixedLookAhead: number | null;
 
   private yaw = 0; // 0 = 镜头在目标 +Z 方向，看向 -Z（主路线方向）
   private pitch: number;
   private targetDistance: number;
   private currentDistance: number;
   private readonly followPoint = new Vector3Impl();
+  /** 注视点：跟随点 + 前看偏移；镜头 lookAt 它（不进快照，纯视觉）。 */
+  private readonly lookTarget = new Vector3Impl();
 
   /** 结局运镜状态：触发后保持 true，直到 game:reset 清除。 */
   private finaleActive = false;
@@ -92,6 +117,7 @@ export class CameraRig implements GameSystem {
     this.input = options.input;
     this.defaultDistance = options.distance ?? CAMERA_DEFAULT_DISTANCE;
     this.defaultPitch = options.pitch ?? CAMERA_DEFAULT_PITCH;
+    this.fixedLookAhead = options.lookAhead ?? null;
     this.pitch = this.defaultPitch;
     this.targetDistance = this.defaultDistance;
     this.currentDistance = this.defaultDistance;
@@ -182,6 +208,16 @@ export class CameraRig implements GameSystem {
     return this.followPoint;
   }
 
+  /** 当前注视点（跟随点 + 前看偏移）；调试与构图测试用。 */
+  getLookTarget(): Vector3 {
+    return this.lookTarget;
+  }
+
+  /** 当前前看距离（米）；调试与构图测试用。 */
+  getLookAhead(): number {
+    return this.lookAheadDistance();
+  }
+
   /** 是否处于结局运镜中（调试与测试用）。 */
   isFinaleActive(): boolean {
     return this.finaleActive;
@@ -269,8 +305,30 @@ export class CameraRig implements GameSystem {
       camY = Math.max(camY, groundY + CAMERA_TERRAIN_CLEARANCE);
     }
 
+    // 前看：注视点沿镜头水平前向（即 -yaw 方向）前移，把角色压到画面中下部。
+    const lookAhead = this.lookAheadDistance();
+    this.lookTarget.set(
+      this.followPoint.x - Math.sin(this.yaw) * lookAhead,
+      this.followPoint.y,
+      this.followPoint.z - Math.cos(this.yaw) * lookAhead,
+    );
+
     camera.position.set(camX, camY, camZ);
-    camera.lookAt(this.followPoint);
+    camera.lookAt(this.lookTarget);
+  }
+
+  /**
+   * 前看距离：显式值优先；否则随当前距离等比缩放（默认 5m → 1.6m），
+   * 并钳制在绝对上下限内，保证 3～14m 全程构图不跑偏。
+   */
+  private lookAheadDistance(): number {
+    if (this.fixedLookAhead !== null) {
+      return this.fixedLookAhead;
+    }
+    return Math.min(
+      LOOK_AHEAD_MAX,
+      Math.max(LOOK_AHEAD_MIN, this.currentDistance * CAMERA_LOOK_AHEAD_RATIO),
+    );
   }
 
   private createStatSource(): DebugStatSource {
@@ -280,6 +338,7 @@ export class CameraRig implements GameSystem {
         cameraYaw: Number(this.yaw.toFixed(4)),
         cameraPitch: Number(this.pitch.toFixed(4)),
         cameraDistance: Number(this.currentDistance.toFixed(4)),
+        cameraLookAhead: Number(this.lookAheadDistance().toFixed(4)),
         cameraFinale: this.finaleActive,
       }),
     };
