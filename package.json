@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0-rc.1",
   "description": "Hoshino: Realm of Watercolor - a watercolor 3D narrative exploration demo built with TypeScript, Vite and Three.js.",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

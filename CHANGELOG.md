@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 MIT 许可证，版权署名 `TheNorth7747`；同步 `LICENSE`、`package.json`、`package-lock.json` 与 README。
+
 ### Documentation
 
 - 增加面向外部开发者的 README、架构、开发接入、Agent 协作、贡献、安全和发布准备文档。
