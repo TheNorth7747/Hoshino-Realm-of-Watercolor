@@ -164,6 +164,48 @@ const UI_CSS = `
 .sw-debug__button:hover {
   background: rgba(244, 239, 230, 0.16);
 }
+.sw-minimal-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sw-controls-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(47, 43, 38, 0.14);
+  background: rgba(247, 243, 234, 0.68);
+  color: rgba(47, 43, 38, 0.84);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+.sw-minimal-actions {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.sw-minimal-btn {
+  padding: 5px 12px;
+  border: 1px solid rgba(47, 43, 38, 0.18);
+  border-radius: 999px;
+  background: rgba(251, 247, 239, 0.78);
+  color: #2f2b26;
+  font-size: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.sw-minimal-btn:hover {
+  background: rgba(251, 247, 239, 0.96);
+}
 `;
 
 let mountCount = 0;

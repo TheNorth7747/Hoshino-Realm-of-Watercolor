@@ -23,7 +23,7 @@ async function boot(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__STARWATER__?.game.isRunning === true, undefined, {
     timeout: 20_000,
   });
-  await expect(page.locator(".sw-hud__shards")).toBeVisible();
+  await expect(page.locator(".sw-controls-hint")).toBeVisible();
   await page.waitForTimeout(400);
 }
 

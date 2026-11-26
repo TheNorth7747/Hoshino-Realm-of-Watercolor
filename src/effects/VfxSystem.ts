@@ -7,7 +7,7 @@
  * - 逻辑不等待粒子结束：事件处理是 O(1) 生成，粒子在 update 中自行回收。
  * - 音频属于 P1，本系统完全不依赖它，关闭音频不影响任何流程。
  */
-import type { Vector3 } from "three";
+import type { Texture, Vector3 } from "three";
 import type { DebugValue, EventBusLike, GameContext, GameSystem } from "../core/contracts";
 import { landmarkPosition } from "../config/world";
 import {
@@ -36,6 +36,8 @@ export interface VfxSystemOptions {
   readonly petalMaxFallSpeed?: number;
   /** 可注入分层配置（测试用）；默认 PETAL_LAYERS。 */
   readonly petalLayers?: readonly PetalLayerSpec[];
+  /** V0.3 水彩花瓣贴图提供者。 */
+  readonly petalTextureProvider?: () => Texture | null;
   readonly random?: RandomSource;
 }
 
@@ -62,6 +64,7 @@ export class VfxSystem implements GameSystem {
   private readonly petals: PetalEmitter;
   private readonly ripples: RippleEmitter;
   private readonly resolveTreePosition: () => Vector3;
+  private readonly petalTextureProvider: (() => Texture | null) | null;
   private readonly petalsPerBloom: number;
   private readonly unsubscribers: Array<() => void> = [];
   private readonly attached = { value: false };
@@ -94,6 +97,7 @@ export class VfxSystem implements GameSystem {
     });
 
     this.petalsPerBloom = options.petalsPerBloom ?? DEFAULT_PETALS_PER_BLOOM;
+    this.petalTextureProvider = options.petalTextureProvider ?? null;
     this.resolveTreePosition =
       typeof options.treePosition === "function"
         ? options.treePosition
@@ -121,6 +125,8 @@ export class VfxSystem implements GameSystem {
 
   init(context: GameContext): void {
     if (this.attached.value) return;
+    const petalTexture = this.petalTextureProvider?.() ?? null;
+    if (petalTexture) this.petals.setTexture(petalTexture);
     context.worldRoot.add(this.petals.mesh, this.ripples.mesh);
     this.attached.value = true;
     context.debug.registerStatSource({

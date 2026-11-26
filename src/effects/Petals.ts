@@ -19,6 +19,7 @@ import {
   Object3D,
   PlaneGeometry,
   Vector3,
+  type Texture,
 } from "three";
 import type { Group } from "three";
 import { SlotPool } from "./SlotPool";
@@ -123,6 +124,8 @@ export interface PetalEmitterOptions {
   readonly parent?: Group;
   /** 可注入分层配置（测试用）；默认 PETAL_LAYERS。 */
   readonly layers?: readonly PetalLayerSpec[];
+  /** V0.3 水彩花瓣轮廓贴图。 */
+  readonly petalTexture?: Texture;
 }
 
 export interface ParticleCounts {
@@ -237,8 +240,9 @@ export class PetalEmitter {
       color: 0xffffff, // 真实颜色来自 instanceColor，避免相乘变暗
       side: DoubleSide,
       transparent: true,
-      opacity: 0.82, // A5 为 0.92；分层后降低整体透明叠加
+      opacity: 0.86,
       depthWrite: false,
+      ...(options.petalTexture ? { map: options.petalTexture, alphaTest: 0.1 } : {}),
     });
     this.mesh = new InstancedMesh(geometry, material, options.capacity);
     this.mesh.name = "vfx-petals";
@@ -448,6 +452,14 @@ export class PetalEmitter {
     this.dummy.updateMatrix();
     for (let i = 0; i < this.capacity; i += 1) this.mesh.setMatrixAt(i, this.dummy.matrix);
     this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  setTexture(texture: Texture | null): void {
+    if (this.disposed) return;
+    const mat = this.mesh.material as MeshBasicMaterial;
+    mat.map = texture;
+    mat.alphaTest = texture ? 0.1 : 0;
+    mat.needsUpdate = true;
   }
 
   get counts(): ParticleCounts {

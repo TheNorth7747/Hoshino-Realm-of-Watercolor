@@ -1,19 +1,9 @@
 /**
- * DOM 输入绑定（A2）。
- *
- * 把浏览器事件接到 InputState 上：
- * - 键盘：window keydown/keyup，按 KeyboardEvent.code 映射（PRD 9.3）。
- * - 鼠标：canvas 上按下开始拖拽，window 上移动/抬起（拖出画布也能继续/结束）。
- * - 滚轮：canvas wheel，preventDefault 防止页面缩放/滚动。
- * - 失焦与页面隐藏：清空全部输入，避免角色持续移动（PRD 9.3 / AC-02）。
- *
- * 对话框等表单元素聚焦时不吞按键，保证 UI 可正常输入。
+ * DOM 输入绑定（A2 / V0.3 兼容拖拽旋转 + 单击可选 Pointer Lock）。
  */
 import { applyKeyEvent, shouldPreventDefault, type InputState } from "./InputState";
 
-/** 表单元素上不拦截键盘，避免影响未来对话框的文本输入。 */
 function isFormElement(target: EventTarget | null): boolean {
-  // node 单测环境没有 HTMLElement 全局；浏览器恒存在。
   if (typeof HTMLElement === "undefined") return false;
   if (!(target instanceof HTMLElement)) return false;
   return (
@@ -26,9 +16,7 @@ function isFormElement(target: EventTarget | null): boolean {
 
 export interface DomInputBinderOptions {
   readonly state: InputState;
-  /** wheel/pointerdown 绑定在画布上。 */
   readonly canvas: HTMLCanvasElement;
-  /** keydown/keyup/blur/pointermove/up 绑定在 window 上。 */
   readonly windowTarget: Window;
 }
 
@@ -39,6 +27,9 @@ export class DomInputBinder {
   private activePointerId: number | null = null;
   private lastClientX = 0;
   private lastClientY = 0;
+  private startClientX = 0;
+  private startClientY = 0;
+  private movedDuringPress = false;
   private attached = false;
 
   constructor(options: DomInputBinderOptions) {
@@ -55,6 +46,7 @@ export class DomInputBinder {
     this.windowTarget.addEventListener("keyup", this.onKeyUp);
     this.windowTarget.addEventListener("blur", this.onWindowBlur);
     document.addEventListener("visibilitychange", this.onVisibilityChange);
+    document.addEventListener("pointerlockchange", this.onPointerLockChange);
 
     this.canvas.addEventListener("pointerdown", this.onPointerDown);
     this.windowTarget.addEventListener("pointermove", this.onPointerMove);
@@ -71,6 +63,7 @@ export class DomInputBinder {
     this.windowTarget.removeEventListener("keyup", this.onKeyUp);
     this.windowTarget.removeEventListener("blur", this.onWindowBlur);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
+    document.removeEventListener("pointerlockchange", this.onPointerLockChange);
 
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.windowTarget.removeEventListener("pointermove", this.onPointerMove);
@@ -100,18 +93,34 @@ export class DomInputBinder {
     if (document.hidden) this.state.handleWindowBlur();
   };
 
+  private readonly onPointerLockChange = (): void => {
+    const locked = document.pointerLockElement === this.canvas;
+    this.state.setPointerLocked(locked);
+  };
+
   private readonly onPointerDown = (event: PointerEvent): void => {
-    // 仅主键拖拽旋转；同一时间只跟踪一个指针。
     if (event.button !== 0 || this.activePointerId !== null) return;
     this.activePointerId = event.pointerId;
     this.lastClientX = event.clientX;
     this.lastClientY = event.clientY;
+    this.startClientX = event.clientX;
+    this.startClientY = event.clientY;
+    this.movedDuringPress = false;
     this.state.setDragging(true);
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    if (document.pointerLockElement === this.canvas) {
+      this.state.addMouseDelta(event.movementX, event.movementY);
+      return;
+    }
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
-    this.state.addMouseDelta(event.clientX - this.lastClientX, event.clientY - this.lastClientY);
+    const dx = event.clientX - this.lastClientX;
+    const dy = event.clientY - this.lastClientY;
+    if (Math.hypot(event.clientX - this.startClientX, event.clientY - this.startClientY) > 4) {
+      this.movedDuringPress = true;
+    }
+    this.state.addMouseDelta(dx, dy);
     this.lastClientX = event.clientX;
     this.lastClientY = event.clientY;
   };
@@ -120,6 +129,22 @@ export class DomInputBinder {
     if (this.activePointerId === null || event.pointerId !== this.activePointerId) return;
     this.activePointerId = null;
     this.state.setDragging(false);
+    // 轻点画布（非拖拽）可进入 Pointer Lock；无头环境或用户取消静默忽略
+    if (
+      !this.movedDuringPress &&
+      event.button === 0 &&
+      document.pointerLockElement !== this.canvas &&
+      typeof this.canvas.requestPointerLock === "function"
+    ) {
+      try {
+        const result = this.canvas.requestPointerLock() as unknown;
+        if (result && typeof (result as Promise<void>).catch === "function") {
+          void (result as Promise<void>).catch(() => undefined);
+        }
+      } catch {
+        // 静默忽略不支持 Pointer Lock 的无头环境
+      }
+    }
   };
 
   private readonly onWheel = (event: WheelEvent): void => {

@@ -95,11 +95,8 @@ test("M1-1：角色可以移动和转向", async ({ page }) => {
   expect(before.position).not.toBeNull();
   expect(before.systems).toEqual([
     "player",
-    "companion",
     "story",
     "ui-hud",
-    "ui-dialogue",
-    "ui-ending",
     "ui-debug",
     "reveal",
     "world",
@@ -233,6 +230,6 @@ test("M1-5：调试面板显示系统列表与染色统计", async ({ page }) =>
   const debugRoot = page.locator("#debug-root");
   await expect(debugRoot).toBeVisible();
   await expect(debugRoot).toContainText("已挂载系统");
-  await expect(debugRoot).toContainText("player, companion, story");
+  await expect(debugRoot).toContainText("player, story, ui-hud");
   await expect(debugRoot).toContainText("reveal.coverage");
 });

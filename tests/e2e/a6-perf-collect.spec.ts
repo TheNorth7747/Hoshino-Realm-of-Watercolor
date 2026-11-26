@@ -38,7 +38,7 @@ test(`A6 性能与稳定性采集（${DURATION_SEC}s / ${TAG}）`, async ({ page
   await page.waitForFunction(() => window.__STARWATER__?.game.isRunning === true, undefined, {
     timeout: 20_000,
   });
-  await expect(page.locator(".sw-hud__shards")).toBeVisible();
+  await expect(page.locator(".sw-controls-hint")).toBeVisible();
 
   const device = await page.evaluate(() => ({
     userAgent: navigator.userAgent,
