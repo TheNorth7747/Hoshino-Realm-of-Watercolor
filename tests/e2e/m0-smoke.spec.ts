@@ -28,14 +28,11 @@ test("M0 smoke：空场景加载、渲染、无未处理异常", async ({ page }
   const snapshot = await page.evaluate(() => window.__STARWATER__?.game.getSnapshot() ?? null);
   expect(snapshot).not.toBeNull();
   expect(snapshot?.running).toBe(true);
-  // M1 集成后挂载表固定为 player / reveal / camera；多出或缺少系统都应让这里失败
+  // V0.3 极简探索挂载表
   expect(snapshot?.systems).toEqual([
     "player",
-    "companion",
     "story",
     "ui-hud",
-    "ui-dialogue",
-    "ui-ending",
     "ui-debug",
     "reveal",
     "world",

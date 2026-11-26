@@ -102,11 +102,8 @@ test("M2：主路线走通，不卡在溪流，无软锁", async ({ page }, test
   expect(snapshot?.triangles ?? 0).toBeLessThanOrEqual(350_000);
   expect(snapshot?.systems).toEqual([
     "player",
-    "companion",
     "story",
     "ui-hud",
-    "ui-dialogue",
-    "ui-ending",
     "ui-debug",
     "reveal",
     "world",
