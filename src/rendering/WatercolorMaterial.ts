@@ -33,6 +33,10 @@ export interface RevealUniforms {
   readonly uHatchScale: { value: number };
   readonly uEdgeJitter: { value: number };
   readonly uPulseStrength: { value: number };
+  /** 遮罩 UV 的域扭曲幅度（世界米），用来打散规则圆形边界（V0.2）。 */
+  readonly uWarpAmount: { value: number };
+  /** 远景线稿对比衰减下限：越远越淡，避免远处排线糊成灰网（V0.2）。 */
+  readonly uInkDistanceFade: { value: number };
   /**
    * 最终章远景显色 0..1（A1 / PRD 5.4「远景染色」）。
    * 只作用于世界边界之外的片段（远山环带），界内染色完全不受影响。
@@ -56,6 +60,10 @@ export interface RevealUniformOptions {
   readonly hatchScale?: number;
   readonly edgeJitter?: number;
   readonly pulseStrength?: number;
+  /** 遮罩 UV 域扭曲幅度（世界米）。0 = 关闭，恢复规则圆形边界。 */
+  readonly warpAmount?: number;
+  /** 远景线稿对比衰减下限（0～1），越小远处线稿越淡。 */
+  readonly inkDistanceFade?: number;
   readonly finaleNoiseScale?: number;
   /** 远景显色的饱和度倍率；远山本色与纸色接近，需要提饱和才看得出来。 */
   readonly finaleSaturation?: number;
@@ -79,8 +87,10 @@ export function createRevealUniforms(
     uInkStrength: { value: options.inkStrength ?? 0.42 },
     uPaperScale: { value: options.paperScale ?? 4.5 },
     uHatchScale: { value: options.hatchScale ?? 14 },
-    uEdgeJitter: { value: options.edgeJitter ?? 0.28 },
+    uEdgeJitter: { value: options.edgeJitter ?? 0.34 },
     uPulseStrength: { value: options.pulseStrength ?? 0.18 },
+    uWarpAmount: { value: options.warpAmount ?? 2.6 },
+    uInkDistanceFade: { value: options.inkDistanceFade ?? 0.3 },
     uFinaleReveal: { value: 0 },
     uFinaleNoiseScale: { value: options.finaleNoiseScale ?? 0.07 },
     uFinaleSaturation: { value: options.finaleSaturation ?? 2.4 },
@@ -161,6 +171,8 @@ uniform float uPaperScale;
 uniform float uHatchScale;
 uniform float uEdgeJitter;
 uniform float uPulseStrength;
+uniform float uWarpAmount;
+uniform float uInkDistanceFade;
 uniform float uFinaleReveal;
 uniform float uFinaleNoiseScale;
 uniform float uFinaleSaturation;
@@ -187,28 +199,45 @@ float wcPaperGrain(vec2 p) {
 	return wcNoise(p) * 0.55 + wcNoise(p * 2.7) * 0.45;
 }
 
-// 铅笔排线：两组交叉细线 + 噪声断续；线宽随相机距离放大以抑制摩尔纹
+// 铅笔排线：两层不同疏密/角度的细线 + 低频角度扰动，
+// 避免轴对齐交叉网格那种「工程图」观感（V0.2）。
 float wcPencilHatch(vec2 p, float lineWidth) {
-	vec2 q = p * uHatchScale;
+	float wcRot = (wcNoise(p * 0.035) - 0.5) * 2.2;
+	float cs = cos(wcRot);
+	float sn = sin(wcRot);
+	vec2 q = vec2(cs * p.x - sn * p.y, sn * p.x + cs * p.y) * uHatchScale;
+
 	float a = abs(fract(q.x + q.y) - 0.5);
 	float b = abs(fract(q.x - q.y + 0.37) - 0.5);
 	float lines = 1.0 - smoothstep(0.0, lineWidth, min(a, b));
-	return lines * (0.55 + 0.45 * wcNoise(p * 6.0));
+
+	// 第二层：更疏、更斜，模拟换手/换笔方向的叠加线
+	vec2 q2 = vec2(cs * p.x + sn * p.y, -sn * p.x + cs * p.y) * uHatchScale * 0.42;
+	float a2 = abs(fract(q2.x * 0.73 + q2.y * 1.31) - 0.5);
+	float lines2 = 1.0 - smoothstep(0.0, lineWidth * 0.8, a2);
+
+	float density = (0.55 + 0.45 * wcNoise(p * 6.0)) * (0.72 + 0.28 * wcNoise(p * 1.7));
+	return clamp(lines * 0.78 + lines2 * 0.34, 0.0, 1.0) * density;
 }
 `;
 
 export const WATERCOLOR_COLOR_INJECTION = /* glsl */ `
 vec2 wcWorld = vWatercolorWorldPosition.xz;
-float wcLineWidth = 0.05 + clamp(distance(vWatercolorWorldPosition, uCameraPosition) * 0.0022, 0.0, 0.42);
+float wcDist = distance(vWatercolorWorldPosition, uCameraPosition);
+float wcLineWidth = 0.05 + clamp(wcDist * 0.0022, 0.0, 0.42);
 
-vec2 wcMaskUv = (wcWorld - uBoundsMin) / uBoundsSize;
+// 域扭曲：遮罩 UV 沿多尺度噪声推开，边界从「规则圆」变成晕开的水彩前沿
+vec2 wcWarpDir = vec2(wcNoise(wcWorld * 0.09), wcNoise(wcWorld * 0.09 + 19.73)) - 0.5;
+vec2 wcMaskUv = (wcWorld + wcWarpDir * uWarpAmount - uBoundsMin) / uBoundsSize;
 float wcInBounds = step(0.0, wcMaskUv.x) * step(wcMaskUv.x, 1.0) * step(0.0, wcMaskUv.y) * step(wcMaskUv.y, 1.0);
 vec4 wcMask = texture2D(uRevealMask, clamp(wcMaskUv, 0.0, 1.0));
 float wcReveal = wcMask.r * wcInBounds;
 float wcPulse = wcMask.g * wcInBounds;
 
 float wcGrain = wcPaperGrain(wcWorld * uPaperScale);
-float wcEdgeNoise = wcNoise(wcWorld * uPaperScale * 0.5) - 0.5;
+// 两级边缘噪声：粗颗粒给毛边，细颗粒打散规则圆弧
+float wcEdgeNoise = (wcNoise(wcWorld * uPaperScale * 0.5) - 0.5) * 0.45
+	+ (wcNoise(wcWorld * 2.3) - 0.5) * 0.55;
 
 // 远景（世界边界之外）：遮罩 UV 覆盖不到，最终章用整片显色补上。
 // wcDistant 在界内恒为 0，因此不会改变脚下染色与普通节点 bloom（AC-03～05）。
@@ -223,7 +252,9 @@ if (wcDistant > 0.0) {
 float wcRevealTotal = wcReveal + wcFinale * wcDistant;
 
 vec3 wcPaper = uPaperColor * (0.96 + 0.06 * wcGrain);
-vec3 wcInk = mix(wcPaper, uInkColor, wcPencilHatch(wcWorld, wcLineWidth) * uInkStrength);
+// 线稿对比随距离衰减：近景铅笔实、远景只剩淡淡轮廓（V0.2）
+float wcInkFade = mix(1.0, uInkDistanceFade, smoothstep(12.0, 68.0, wcDist));
+vec3 wcInk = mix(wcPaper, uInkColor, wcPencilHatch(wcWorld, wcLineWidth) * uInkStrength * wcInkFade);
 vec3 wcPaint = diffuseColor.rgb * (0.86 + 0.14 * wcGrain);
 
 // 远山本色（#a9b8c6）与纸色太接近，雾一压就分不出来；
@@ -232,7 +263,7 @@ float wcLuma = dot(wcPaint, vec3(0.299, 0.587, 0.114));
 vec3 wcPaintDistant = clamp(vec3(wcLuma) + (wcPaint - vec3(wcLuma)) * uFinaleSaturation, 0.0, 1.0);
 vec3 wcPaintUsed = mix(wcPaint, wcPaintDistant, wcDistant * uFinaleReveal);
 
-float wcMasked = smoothstep(0.06, 0.72, wcRevealTotal + wcEdgeNoise * uEdgeJitter);
+float wcMasked = smoothstep(0.10, 0.62, wcRevealTotal + wcEdgeNoise * uEdgeJitter);
 
 vec3 wcFinal = mix(wcInk, wcPaintUsed, wcMasked);
 wcFinal += uPulseColor * wcPulse * uPulseStrength;

@@ -54,15 +54,24 @@ export function createSceneScaffold(options: SceneScaffoldOptions): SceneScaffol
   const fogFar = Math.max(sizeX, sizeZ) * 1.35;
   scene.fog = new Fog(settings.clearColor, fogNear, fogFar);
 
-  const hemisphere = new HemisphereLight(0xffffff, 0xb9c2c9, 0.9);
+  // V0.2 光照：降低半球光的均匀填平感，让纸面有柔和的明暗层次；
+  // 加一盏很弱的天顶补光（无阴影、无额外 pass），不引入 bloom/SSAO。
+  const hemisphere = new HemisphereLight(0xfff8ec, 0xc2c8c9, 0.72);
   hemisphere.name = "hemisphere-light";
   scene.add(hemisphere);
 
-  const sun = new DirectionalLight(0xfff3e0, 1.5);
+  const sun = new DirectionalLight(0xfff3e0, 1.34);
   sun.name = "key-light";
   sun.position.set(spawn.x + 24, spawn.y + 42, spawn.z + 18);
   sun.castShadow = false; // 首版只给关键对象投影，默认关闭，由 A3 按需开启
   scene.add(sun);
+
+  // 反向补光：压一点背光面死黑，让树冠/角色轮廓能读出来
+  const fill = new DirectionalLight(0xd8e4f2, 0.22);
+  fill.name = "fill-light";
+  fill.position.set(spawn.x - 20, spawn.y + 26, spawn.z - 24);
+  fill.castShadow = false;
+  scene.add(fill);
 
   const worldRoot = new Group();
   worldRoot.name = WORLD_ROOT_NAME;
