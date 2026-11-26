@@ -106,11 +106,11 @@ describe("WorldSystem · 场景构建", () => {
     // V0.2 预算（PRD 11.1 上限 350k，本轮目标 ≤300k）。
     expect(world.getTriangles()).toBeGreaterThan(0);
     expect(world.getTriangles()).toBeLessThanOrEqual(300_000);
-    // 密度：草 1.2万～2万簇、花 700～1200 朵。
+    // 密度：草 1.2万～2万簇、花 1200～2000 朵。
     expect(world.getGrassPlaced()).toBeGreaterThanOrEqual(12_000);
     expect(world.getGrassPlaced()).toBeLessThanOrEqual(20_000);
-    expect(world.getFlowerPlaced()).toBeGreaterThanOrEqual(700);
-    expect(world.getFlowerPlaced()).toBeLessThanOrEqual(1200);
+    expect(world.getFlowerPlaced()).toBeGreaterThanOrEqual(1_200);
+    expect(world.getFlowerPlaced()).toBeLessThanOrEqual(2_000);
     // 实例数 = 可见草簇 + 花茎/花头 + 树/山实例（LOD 隐藏层不重复计）。
     expect(world.getInstances()).toBeGreaterThanOrEqual(world.getGrassPlaced());
     expect(world.getInstances()).toBeLessThan(60_000);
@@ -196,7 +196,7 @@ describe("WorldSystem · 碰撞数据（PRD 9.3 圆形碰撞）", () => {
     world.dispose();
   });
 
-  it("碰撞体数量 = 花树 1 + 枯树 3 + 岩石 3，且全部在可玩边界内", () => {
+  it("碰撞体数量 = 花树 1 + 倒木 1 + 岩石 5，且全部在可玩边界内", () => {
     const context = createContext();
     const world = createWorldSystem();
     world.init(context);

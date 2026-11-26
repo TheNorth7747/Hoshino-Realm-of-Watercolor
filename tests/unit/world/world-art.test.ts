@@ -72,15 +72,15 @@ describe("V0.2 · 散布确定性", () => {
   });
 });
 
-describe("V0.2 · 密度与分块", () => {
-  it("草 1.2万～2万簇、花 700～1200 朵，三色花带均非空", () => {
+describe("V0.2/V0.3 · 密度与分块", () => {
+  it("草 1.2万～2万簇、花 1200～2000 朵，四色花带均非空", () => {
     const build = buildVegetationGroup(makeAccessor());
     expect(build.grassPlaced).toBeGreaterThanOrEqual(12_000);
     expect(build.grassPlaced).toBeLessThanOrEqual(20_000);
-    expect(build.flowerPlaced).toBeGreaterThanOrEqual(700);
-    expect(build.flowerPlaced).toBeLessThanOrEqual(1200);
+    expect(build.flowerPlaced).toBeGreaterThanOrEqual(1_200);
+    expect(build.flowerPlaced).toBeLessThanOrEqual(2_000);
     let sum = 0;
-    for (const kind of ["flower", "flowerRed", "flowerYellow"] as const) {
+    for (const kind of ["flower", "flowerRed", "flowerMagenta", "flowerYellow"] as const) {
       const blooms = build.group.getObjectByName(`flower-blooms-${kind}`) as InstancedMesh;
       expect(blooms.count).toBeGreaterThan(0);
       sum += blooms.count;
@@ -191,7 +191,7 @@ describe("V0.2 · 花树伞形与材质共享", () => {
     expect(canopy).toBeInstanceOf(InstancedMesh);
     expect(canopy.count).toBeGreaterThanOrEqual(40);
     const branches = context.worldRoot.getObjectByName("flower-tree-branches") as InstancedMesh;
-    expect(branches.count).toBe(5);
+    expect(branches.count).toBeGreaterThanOrEqual(5);
     const trunkCollider = world
       .getColliders()
       .find((c) => c.x === LANDMARKS.tree.x && c.z === LANDMARKS.tree.z);

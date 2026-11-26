@@ -1,39 +1,25 @@
 /**
- * 地形 / 水面 / 远山网格构建（A3，PRD 9.4）。
+ * 地形 / 水面 / 远山网格构建（A3 / V0.3 升级）。
  *
- * - 地形：96m × 96m 平面细分后按 terrainHeight 逐顶点抬升，法线重算；
- *   顶点位置即世界坐标（网格位于原点），A1 的世界坐标染色直接成立。
- * - 水面：横跨 X 轴的平面，宽度与中心线来自 config/world.ts 的 STREAM；
- *   高度取 terrainHeight.STREAM_WATER_LEVEL，两岸高度由地形函数保证恒高于水面。
- * - 远山：边界外一圈低面数圆锥（实例化、不进入高度采样、不设碰撞），雾化收边。
- *
- * 材质由调用方通过 MaterialAccessor 注入（WorldSystem 持有并负责后续替换为
- * A1 水彩材质）；每个网格用 userData["worldMaterialKind"] 标记种类。
+ * - 地形：96m × 96m 平面细分后按 terrainHeight 逐顶点抬升，平滑法线。
+ * - 水面：横跨 X 轴的平面，保留 UV 供 V0.3 `water` 流动水彩笔触着色器使用。
+ * - 远山：委托 `./Mountains` 构建 3 层连绵水彩山脊环带（替代圆锥）。
  */
 import {
-  BufferGeometry,
-  ConeGeometry,
-  Float32BufferAttribute,
   Group,
-  InstancedMesh,
   Mesh,
   PlaneGeometry,
-  Object3D,
+  type BufferGeometry,
+  type InstancedMesh,
   type Material,
 } from "three";
 import { STREAM, WORLD_BOUNDS } from "../config/world";
 import { STREAM_WATER_LEVEL, sampleTerrainHeight } from "./terrainHeight";
+import { buildMountainGroup } from "./Mountains";
 import type { WorldMaterialKind } from "./worldMaterials";
-import { mulberry32, uniformRange } from "./scatter";
 
 /** 地形网格分辨率：121² 顶点 ≈ 28.8k 三角面，远低于 PRD 350k 预算。 */
 const TERRAIN_SEGMENTS = 120;
-/** 远山数量与种子（确定性复现）。 */
-const MOUNTAIN_COUNT = 9;
-const MOUNTAIN_SEED = 20261117;
-/** 远山环带半径：全部在可玩边界外。 */
-const MOUNTAIN_RING_MIN = 74;
-const MOUNTAIN_RING_MAX = 94;
 
 export interface WorldMeshBuild {
   readonly group: Group;
@@ -50,7 +36,7 @@ export function geometryTriangleCount(geometry: BufferGeometry): number {
   return (geometry.attributes["position"]?.count ?? 0) / 3;
 }
 
-/** 标记网格的材质种类，WorldSystem 据此做染色材质替换。三个构建文件共用。 */
+/** 标记网格的材质种类，WorldSystem 据此做染色材质替换。 */
 export function tagWorldMaterialKind(mesh: Mesh | InstancedMesh, kind: WorldMaterialKind): void {
   mesh.userData["worldMaterialKind"] = kind;
 }
@@ -68,7 +54,6 @@ export function buildTerrainGroup(materials: MaterialAccessor): WorldMeshBuild {
     TERRAIN_SEGMENTS,
     TERRAIN_SEGMENTS,
   );
-  // PlaneGeometry 默认在 XY 平面：翻转到 XZ 后逐顶点按世界坐标采样抬升。
   terrainGeometry.rotateX(-Math.PI / 2);
   const positions = terrainGeometry.attributes["position"];
   if (!positions) throw new Error("terrain geometry 缺少 position 属性");
@@ -85,12 +70,12 @@ export function buildTerrainGroup(materials: MaterialAccessor): WorldMeshBuild {
   triangleCount += geometryTriangleCount(terrainGeometry);
   group.add(terrain);
 
-  // ---- 溪流水面：宽度/中心线/长度全部来自 config与世界常量 ----
+  // ---- 溪流水面：PlaneGeometry 自带 u∈[0,1] 沿 X、v∈[0,1] 跨宽度，供水彩水纹流动 ----
   const waterGeometry = new PlaneGeometry(
     WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX,
     STREAM.widthMeters,
     96,
-    1,
+    4,
   );
   waterGeometry.rotateX(-Math.PI / 2);
   waterGeometry.translate(0, STREAM_WATER_LEVEL, STREAM.centerZ);
@@ -100,132 +85,10 @@ export function buildTerrainGroup(materials: MaterialAccessor): WorldMeshBuild {
   triangleCount += geometryTriangleCount(waterGeometry);
   group.add(water);
 
-  // ---- 溪流水纹 + 岸线笔触（V0.2 可读性，保持原河道） ----
-  const strokes = buildStreamStrokes(materials);
-  triangleCount += strokes.triangleCount;
-  group.add(strokes.group);
-
-  // ---- 远山 ----
-  const mountains = buildMountainRing(materials);
+  // ---- 三层连绵水彩远山 ----
+  const mountains = buildMountainGroup(materials);
   triangleCount += mountains.triangleCount;
   group.add(mountains.group);
-
-  return { group, triangleCount };
-}
-
-/** 远山环带：界外低面数圆锥，实例化单次绘制（PRD 11.1 Draw Calls 预算）。 */
-function buildMountainRing(materials: MaterialAccessor): WorldMeshBuild {
-  const group = new Group();
-  group.name = "mountain-ring";
-  const random = mulberry32(MOUNTAIN_SEED);
-  let triangleCount = 0;
-
-  const geometry = new ConeGeometry(1, 1, 7);
-  const mesh = new InstancedMesh(geometry, materials("mountain"), MOUNTAIN_COUNT);
-  mesh.name = "mountain-instances";
-  tagWorldMaterialKind(mesh, "mountain");
-
-  const dummy = new Object3D();
-  let placed = 0;
-  for (let i = 0; i < MOUNTAIN_COUNT; i += 1) {
-    const angle = (i / MOUNTAIN_COUNT) * Math.PI * 2 + uniformRange(random, -0.18, 0.18);
-    const radius = uniformRange(random, MOUNTAIN_RING_MIN, MOUNTAIN_RING_MAX);
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    // 只保留真正在可玩边界外的山，避免山体进入玩家视野前景。
-    if (Math.abs(x) < WORLD_BOUNDS.maxX + 12 && Math.abs(z) < WORLD_BOUNDS.maxZ + 12) continue;
-    const height = uniformRange(random, 16, 30);
-    const baseRadius = uniformRange(random, 14, 22);
-    dummy.position.set(x, height / 2 - 1.5, z);
-    dummy.scale.set(baseRadius, height, baseRadius);
-    dummy.rotation.y = uniformRange(random, 0, Math.PI);
-    dummy.updateMatrix();
-    mesh.setMatrixAt(placed, dummy.matrix);
-    placed += 1;
-  }
-  mesh.count = placed;
-  mesh.instanceMatrix.needsUpdate = true;
-  triangleCount += geometryTriangleCount(geometry) * placed;
-  group.add(mesh);
-
-  return { group, triangleCount };
-}
-
-/**
- * 溪流水纹（水面高光细条）+ 岸线笔触（岸缘细带）。
- * 不改变河道/水面几何（保持原河道与既有断言），仅叠加可读性笔触。
- */
-function buildStreamStrokes(materials: MaterialAccessor): WorldMeshBuild {
-  const group = new Group();
-  group.name = "stream-strokes";
-  const random = mulberry32(20261121);
-  let triangleCount = 0;
-
-  // 水纹：若干沿 X 的细长三角带，略高于水面。
-  const waterPositions: number[] = [];
-  const waterIndices: number[] = [];
-  const STROKE_COUNT = 6;
-  for (let i = 0; i < STROKE_COUNT; i += 1) {
-    const length = uniformRange(random, 10, 26);
-    const centerX = uniformRange(random, -30, 30);
-    const z = STREAM.centerZ + uniformRange(random, -1.4, 1.4);
-    const y = STREAM_WATER_LEVEL + 0.03;
-    const halfWidth = 0.06;
-    const base = waterPositions.length / 3;
-    waterPositions.push(
-      centerX - length / 2,
-      y,
-      z - halfWidth,
-      centerX + length / 2,
-      y,
-      z - halfWidth,
-      centerX - length / 2,
-      y,
-      z + halfWidth,
-      centerX + length / 2,
-      y,
-      z + halfWidth,
-    );
-    waterIndices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
-  }
-  const waterStrokeGeometry = new BufferGeometry();
-  waterStrokeGeometry.setAttribute("position", new Float32BufferAttribute(waterPositions, 3));
-  waterStrokeGeometry.setIndex(waterIndices);
-  waterStrokeGeometry.computeVertexNormals();
-  const waterStrokes = new Mesh(waterStrokeGeometry, materials("water"));
-  waterStrokes.name = "stream-water-strokes";
-  tagWorldMaterialKind(waterStrokes, "water");
-  triangleCount += geometryTriangleCount(waterStrokeGeometry);
-  group.add(waterStrokes);
-
-  // 岸线笔触：两岸缘细带，贴地略抬升，读作铅笔岸线。
-  const bankPositions: number[] = [];
-  const bankIndices: number[] = [];
-  const halfSpan = WORLD_BOUNDS.maxX;
-  const step = 4;
-  for (const side of [-1, 1]) {
-    const edgeZ = STREAM.centerZ + side * (STREAM.widthMeters / 2 + 0.1);
-    const start = bankPositions.length / 3;
-    let row = 0;
-    for (let x = -halfSpan; x <= halfSpan; x += step) {
-      const y = sampleTerrainHeight(x, edgeZ) + 0.04;
-      bankPositions.push(x, y, edgeZ - 0.14, x, y, edgeZ + 0.14);
-      if (row > 0) {
-        const a = start + (row - 1) * 2;
-        bankIndices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
-      }
-      row += 1;
-    }
-  }
-  const bankGeometry = new BufferGeometry();
-  bankGeometry.setAttribute("position", new Float32BufferAttribute(bankPositions, 3));
-  bankGeometry.setIndex(bankIndices);
-  bankGeometry.computeVertexNormals();
-  const bankStrokes = new Mesh(bankGeometry, materials("rock"));
-  bankStrokes.name = "stream-bank-strokes";
-  tagWorldMaterialKind(bankStrokes, "rock");
-  triangleCount += geometryTriangleCount(bankGeometry);
-  group.add(bankStrokes);
 
   return { group, triangleCount };
 }
