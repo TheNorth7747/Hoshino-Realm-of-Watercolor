@@ -1,21 +1,9 @@
 /**
- * 世界系统（A3，PRD 9.4 / 12.2 A3）。
+ * 世界系统（A3 / V0.3 视觉重构）。
  *
- * 职责：
- * - init：用默认普通材质构建地形、水面、远山、植被、地标物，挂到 context.worldRoot；
- *   构建「未接入染色也能独立运行」的完整场景（PRD：染色材质通过接口注入，未接入前用占位材质）。
- * - update：仅首帧做一次性材质绑定——把 A1 的 RevealUniforms 注入各类材质
- *   （createWatercolorMaterial 同款外观重建），之后每帧 no-op。
- *   uniforms 由 RevealSystem 在 init 阶段创建，而 Game.start() 先跑完全部 init
- *   再进入更新循环，所以首帧 update 时 provider 必然可取到（若 A1 未挂载则保持普通材质）。
- * - 碰撞数据：花树 / 枯树 / 岩石的圆形碰撞体，由集成者接到
- *   `PlayerController.addColliders(world.getColliders())`；踏石不设碰撞（可直接蹚过）。
- * - 地形高度：`terrainHeight.sampleTerrainHeight`，由集成者把 config/world.ts 的
- *   平坦占位替换为 re-export 本实现（一行），玩家贴地 / 镜头避让 / 出生点自动跟随。
- * - dispose：释放全部几何体与材质（PRD 7.3 / 11.1）。
- *
- * phase 选择：世界无逐帧逻辑（首帧绑定后 no-op），取 "reveal" 并在集成顺序中
- * 排在 RevealSystem 之后，保证绑定发生在 reveal 更新之后的同一帧渲染前。
+ * - init：先用默认普通材质构建地形/远山/植被/地标/小径/普通树/叙事小景，确保无染色也能运行。
+ * - update：首帧获取 `revealUniformsProvider` 与可选 `brushPackProvider`，
+ *   将全部分类的材质替换为共用同一 `RevealUniforms` 的 V0.3 水彩材质；每帧更新草块 LOD。
  */
 import {
   MeshStandardMaterial,
@@ -23,27 +11,35 @@ import {
   type InstancedMesh,
   type Material,
   type Mesh,
+  type Texture,
 } from "three";
 import type { DebugStatSource, GameContext, GameSystem, SystemPhase } from "../core/contracts";
 import { disposeMaterial, disposeObject3D } from "../core/dispose";
+import type { ProceduralBrushPack } from "../rendering/ProceduralBrushes";
 import { createWatercolorMaterial, type RevealUniforms } from "../rendering/WatercolorMaterial";
 import type { CollisionCircle } from "../player/collision";
 import { buildTerrainGroup } from "./Terrain";
 import { buildVegetationGroup, GRASS_LOD_DISTANCE, type GrassLodChunk } from "./Vegetation";
 import { buildLandmarkGroup } from "./Landmarks";
 import { buildPathGroup } from "./Path";
+import { buildPropsGroup } from "./Props";
 import { buildOrdinaryTreeGroup } from "./Trees";
 import { STREAM_WATER_LEVEL } from "./terrainHeight";
 import {
   WORLD_MATERIAL_APPEARANCE,
   WORLD_MATERIAL_KINDS,
   type RevealUniformsProvider,
+  type WorldMaterialAppearance,
   type WorldMaterialKind,
 } from "./worldMaterials";
+
+export type BrushPackProvider = () => ProceduralBrushPack | null;
 
 export interface WorldSystemOptions {
   /** A1 uniforms 提供者（注入染色材质）；缺省时世界保持普通材质。 */
   readonly revealUniformsProvider?: RevealUniformsProvider;
+  /** V0.3 程序化水彩笔触贴图包提供者。 */
+  readonly brushPackProvider?: BrushPackProvider;
 }
 
 export class WorldSystem implements GameSystem {
@@ -51,6 +47,7 @@ export class WorldSystem implements GameSystem {
   readonly phase: SystemPhase = "reveal";
 
   private readonly revealUniformsProvider: RevealUniformsProvider | null;
+  private readonly brushPackProvider: BrushPackProvider | null;
   private readonly materials = new Map<WorldMaterialKind, Material>();
   private readonly kindMeshes = new Map<WorldMaterialKind, Array<Mesh | InstancedMesh>>();
   private readonly topGroups: Array<Group> = [];
@@ -67,6 +64,7 @@ export class WorldSystem implements GameSystem {
 
   constructor(options: WorldSystemOptions = {}) {
     this.revealUniformsProvider = options.revealUniformsProvider ?? null;
+    this.brushPackProvider = options.brushPackProvider ?? null;
   }
 
   init(context: GameContext): void {
@@ -77,14 +75,16 @@ export class WorldSystem implements GameSystem {
     const landmarkBuild = buildLandmarkGroup(accessor);
     const pathBuild = buildPathGroup(accessor);
     const treeBuild = buildOrdinaryTreeGroup(accessor);
+    const propsBuild = buildPropsGroup(accessor);
 
     this.triangleCount =
       terrainBuild.triangleCount +
       vegetationBuild.triangleCount +
       landmarkBuild.triangleCount +
       pathBuild.triangleCount +
-      treeBuild.triangleCount;
-    this.colliders = landmarkBuild.colliders;
+      treeBuild.triangleCount +
+      propsBuild.triangleCount;
+    this.colliders = [...landmarkBuild.colliders, ...propsBuild.colliders];
     this.grassLod = vegetationBuild.grassLod;
     this.grassPlaced = vegetationBuild.grassPlaced;
     this.flowerPlaced = vegetationBuild.flowerPlaced;
@@ -95,6 +95,7 @@ export class WorldSystem implements GameSystem {
       landmarkBuild.group,
       pathBuild.group,
       treeBuild.group,
+      propsBuild.group,
     );
     for (const group of this.topGroups) {
       context.worldRoot.add(group);
@@ -109,12 +110,14 @@ export class WorldSystem implements GameSystem {
   update(_deltaSeconds: number, context: GameContext): void {
     if (!this.materialsBound) {
       const uniforms = this.revealUniformsProvider?.() ?? null;
-      if (uniforms) this.bindRevealMaterials(uniforms);
+      if (uniforms) {
+        const brushes = this.brushPackProvider?.() ?? null;
+        this.bindRevealMaterials(uniforms, brushes);
+      }
     }
     this.updateGrassLod(context.camera.position);
   }
 
-  /** 草分块 LOD：相机近的块用三叶簇，远的块用单叶；视锥剔除由包围球承担。 */
   private updateGrassLod(cameraPosition: { x: number; y: number; z: number }): void {
     let changed = false;
     for (const chunk of this.grassLod) {
@@ -148,12 +151,10 @@ export class WorldSystem implements GameSystem {
     this.statSource = null;
   }
 
-  /** A2 的碰撞入口：花树 / 枯树 / 岩石的圆形碰撞体。 */
   getColliders(): readonly CollisionCircle[] {
     return this.colliders;
   }
 
-  /** 是否已完成水彩材质绑定（调试与测试用）。 */
   isRevealBound(): boolean {
     return this.materialsBound;
   }
@@ -166,12 +167,10 @@ export class WorldSystem implements GameSystem {
     return this.instanceCount;
   }
 
-  /** 实际放置的草簇数（V0.2 密度验收）。 */
   getGrassPlaced(): number {
     return this.grassPlaced;
   }
 
-  /** 实际放置的花头数（V0.2 密度验收）。 */
   getFlowerPlaced(): number {
     return this.flowerPlaced;
   }
@@ -193,6 +192,7 @@ export class WorldSystem implements GameSystem {
       color: appearance.color,
       roughness: appearance.roughness ?? 0.94,
       flatShading: appearance.flatShading ?? false,
+      ...(appearance.side === undefined ? {} : { side: appearance.side }),
     });
     material.name = `world-${kind}`;
     if (appearance.transparent) {
@@ -221,7 +221,7 @@ export class WorldSystem implements GameSystem {
     this.instanceCount = 0;
     for (const meshes of this.kindMeshes.values()) {
       for (const mesh of meshes) {
-        if (!mesh.visible) continue; // LOD 隐藏层不重复计数
+        if (!mesh.visible) continue;
         const instanced = mesh as InstancedMesh;
         if (typeof instanced.count === "number" && instanced.isInstancedMesh) {
           this.instanceCount += instanced.count;
@@ -230,25 +230,52 @@ export class WorldSystem implements GameSystem {
     }
   }
 
-  /** 一次性：把 A1 uniforms 注入全部种类（同款外观重建 + 替换网格材质 + 释放普通材质）。 */
-  private bindRevealMaterials(uniforms: RevealUniforms): void {
+  private resolveTextureBindings(
+    appearance: WorldMaterialAppearance,
+    brushes: ProceduralBrushPack | null,
+  ): {
+    paintMap?: Texture;
+    sketchMap?: Texture;
+    waterMap?: Texture;
+    barkMap?: Texture;
+  } {
+    if (!brushes) return {};
+    if (appearance.brushKey === "foliage") {
+      return { paintMap: brushes.foliagePaint, sketchMap: brushes.foliageSketch };
+    }
+    if (appearance.brushKey === "water") {
+      return { waterMap: brushes.waterStroke };
+    }
+    if (appearance.brushKey === "birch") {
+      return { barkMap: brushes.birchBark };
+    }
+    return {};
+  }
+
+  private bindRevealMaterials(uniforms: RevealUniforms, brushes: ProceduralBrushPack | null): void {
     for (const kind of WORLD_MATERIAL_KINDS) {
       const meshes = this.kindMeshes.get(kind);
       if (!meshes || meshes.length === 0) continue;
 
       const appearance = WORLD_MATERIAL_APPEARANCE[kind];
+      const tex = this.resolveTextureBindings(appearance, brushes);
       const watercolor = createWatercolorMaterial({
         color: appearance.color,
         uniforms,
         ...(appearance.roughness === undefined ? {} : { roughness: appearance.roughness }),
         ...(appearance.flatShading === undefined ? {} : { flatShading: appearance.flatShading }),
+        ...(appearance.side === undefined ? {} : { side: appearance.side }),
+        ...(appearance.mode === undefined ? {} : { mode: appearance.mode }),
+        ...(appearance.windStrength === undefined ? {} : { windStrength: appearance.windStrength }),
+        ...(appearance.topColor === undefined ? {} : { topColor: appearance.topColor }),
+        ...(appearance.bottomColor === undefined ? {} : { bottomColor: appearance.bottomColor }),
+        ...(appearance.alphaCutoff === undefined ? {} : { alphaCutoff: appearance.alphaCutoff }),
+        ...(appearance.transparent === undefined ? {} : { transparent: appearance.transparent }),
+        ...(appearance.opacity === undefined ? {} : { opacity: appearance.opacity }),
+        ...(appearance.transparent ? { depthWrite: false } : {}),
+        ...tex,
         name: `world-${kind}-reveal`,
       });
-      if (appearance.transparent) {
-        watercolor.transparent = true;
-        watercolor.opacity = appearance.opacity ?? 1;
-        watercolor.depthWrite = false;
-      }
 
       for (const mesh of meshes) mesh.material = watercolor;
       const plain = this.materials.get(kind);
@@ -274,7 +301,6 @@ export class WorldSystem implements GameSystem {
   }
 }
 
-/** 供集成者构造：`const world = createWorldSystem({ revealUniformsProvider: () => reveal.revealUniforms })`。 */
 export function createWorldSystem(options: WorldSystemOptions = {}): WorldSystem {
   return new WorldSystem(options);
 }

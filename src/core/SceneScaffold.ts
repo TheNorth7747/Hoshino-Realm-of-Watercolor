@@ -50,8 +50,8 @@ export function createSceneScaffold(options: SceneScaffoldOptions): SceneScaffol
 
   const sizeX = bounds.maxX - bounds.minX;
   const sizeZ = bounds.maxZ - bounds.minZ;
-  const fogNear = Math.min(sizeX, sizeZ) * 0.45;
-  const fogFar = Math.max(sizeX, sizeZ) * 1.35;
+  const fogNear = Math.min(sizeX, sizeZ) * 0.48;
+  const fogFar = Math.max(sizeX, sizeZ) * 1.68;
   scene.fog = new Fog(settings.clearColor, fogNear, fogFar);
 
   // V0.2 光照：降低半球光的均匀填平感，让纸面有柔和的明暗层次；
