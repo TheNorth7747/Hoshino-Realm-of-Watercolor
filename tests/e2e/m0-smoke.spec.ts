@@ -37,6 +37,7 @@ test("M0 smoke：空场景加载、渲染、无未处理异常", async ({ page }
     "reveal",
     "world",
     "effects-vfx",
+    "audio",
     "camera",
   ]);
   expect(snapshot?.errorCount).toBe(0);

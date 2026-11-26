@@ -15,7 +15,7 @@ import { createPlayerSystems } from "./player";
 import { RevealSystem } from "./rendering";
 import { createWorldSystem } from "./world";
 import { createMinimalExploreSystems } from "./narrative";
-import { VfxSystem, type VfxStats } from "./effects";
+import { AudioSystem, VfxSystem, type VfxStats } from "./effects";
 import { landmarkPosition } from "./config/world";
 import type { Texture } from "three";
 
@@ -68,11 +68,18 @@ function createSystems(): SystemsBuild {
     revealUniformsProvider: () => reveal.revealUniforms,
     brushPackProvider: () => reveal.brushPack,
   });
-  const explore = createMinimalExploreSystems({ player });
+  const audio = new AudioSystem();
+  const explore = createMinimalExploreSystems({
+    player,
+    hud: {
+      onToggleAudio: () => audio.toggleMute(),
+      isAudioMuted: () => audio.isMuted(),
+    },
+  });
   const vfx = createVfxSystem(() => reveal.brushPack?.petal ?? null);
 
   return {
-    systems: [player, reveal, world, ...explore, vfx, camera],
+    systems: [player, reveal, world, ...explore, vfx, audio, camera],
     attachColliders(): void {
       player.addColliders(world.getColliders());
     },

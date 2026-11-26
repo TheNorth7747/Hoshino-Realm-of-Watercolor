@@ -20,3 +20,6 @@ export {
   type AudioManagerOptions,
   type AudioCue,
 } from "./AudioManager";
+export { DebussyPiano, ARABESQUE_SCORE, midiToHz, noteToMidi } from "./DebussyPiano";
+export type { DebussyPianoOptions, PianoNoteEvent } from "./DebussyPiano";
+export { AudioSystem } from "./AudioSystem";
