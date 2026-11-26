@@ -101,6 +101,7 @@ test("M1-1：角色可以移动和转向", async ({ page }) => {
     "reveal",
     "world",
     "effects-vfx",
+    "audio",
     "camera",
   ]);
 

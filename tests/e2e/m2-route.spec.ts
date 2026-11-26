@@ -108,6 +108,7 @@ test("M2：主路线走通，不卡在溪流，无软锁", async ({ page }, test
     "reveal",
     "world",
     "effects-vfx",
+    "audio",
     "camera",
   ]);
 
