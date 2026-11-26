@@ -7,6 +7,8 @@ export * from "./MaskSurface";
 export * from "./ColorRevealMask";
 export * from "./Atmosphere";
 export * from "./FinaleReveal";
+export * from "./GodRays";
+export * from "./ProceduralBrushes";
 export * from "./WatercolorMaterial";
 export * from "./WatercolorPass";
 export * from "./RevealBench";

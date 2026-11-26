@@ -1,11 +1,11 @@
 /**
- * 结局氛围（V0.2 / Agent 1）：天空渐变与雾色随 finale 值渐变。
+ * 结局氛围（V0.2 / V0.3 水彩云霞升级）：天空水彩云层渐变与雾色随 finale 值渐变。
  *
  * 设计约束：
  * - 复用既有最终章状态（`RevealSystem` 的 `FinaleReveal`），不新建故事状态。
- * - 不引入重度后处理：天空是 1 个 BackSide 球体 + 渐变 shader（1 draw call），
+ * - 不引入重度后处理：天空是 1 个 BackSide 球体 + FBM 水彩云渐变 shader（1 draw call），
  *   雾只是改 `scene.fog.color`，背景只是改 `scene.background`。
- * - 开场保持暖纸色（取自 SceneScaffold 设定的背景），复位时逐值回到初始。
+ * - 开场保持暖纸色，复位时逐值回到初始。
  */
 import {
   BackSide,
@@ -19,9 +19,9 @@ import {
 } from "three";
 
 export interface AtmosphereOptions {
-  /** 结局天空主色（淡桃）。 */
+  /** 结局天空上层淡桃/藕荷色。 */
   readonly sunsetColor?: ColorRepresentation;
-  /** 结局地平线色（暖橙）。 */
+  /** 结局地平线暖金色。 */
   readonly sunsetHorizon?: ColorRepresentation;
   /** 天空球半径（米）。默认 420，需大于场景包围盒。 */
   readonly skyRadius?: number;
@@ -29,8 +29,8 @@ export interface AtmosphereOptions {
   readonly enableSkyDome?: boolean;
 }
 
-const DEFAULT_SUNSET = 0xf3cfb6;
-const DEFAULT_SUNSET_HORIZON = 0xf7e0c4;
+const DEFAULT_SUNSET = 0xd6b8c4;
+const DEFAULT_SUNSET_HORIZON = 0xf7dfc0;
 
 const SKY_VERTEX = /* glsl */ `
 varying vec3 vSkyDirection;
@@ -44,21 +44,54 @@ const SKY_FRAGMENT = /* glsl */ `
 uniform vec3 uZenithColor;
 uniform vec3 uHorizonColor;
 uniform float uFinale;
+uniform float uTime;
 uniform vec3 uSunsetZenith;
 uniform vec3 uSunsetHorizon;
 varying vec3 vSkyDirection;
 
+float skyHash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float skyNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(skyHash(i), skyHash(i + vec2(1.0, 0.0)), u.x),
+    mix(skyHash(i + vec2(0.0, 1.0)), skyHash(i + vec2(1.0, 1.0)), u.x),
+    u.y
+  );
+}
+
+float skyFbm(vec2 p) {
+  float v = 0.0;
+  v += skyNoise(p) * 0.55;
+  v += skyNoise(p * 2.13 + 3.7) * 0.30;
+  v += skyNoise(p * 4.41 + 9.2) * 0.15;
+  return v;
+}
+
 void main() {
   float height = clamp(vSkyDirection.y * 0.5 + 0.5, 0.0, 1.0);
-  float blend = smoothstep(0.46, 0.82, height);
+  float blend = smoothstep(0.47, 0.82, height);
 
   vec3 zenith = mix(uZenithColor, uSunsetZenith, uFinale);
   vec3 horizon = mix(uHorizonColor, uSunsetHorizon, uFinale);
   vec3 color = mix(horizon, zenith, blend);
 
-  // 地平线附近再压一层暖光，让结局的「天边发亮」可读
-  float glow = pow(clamp(1.0 - abs(vSkyDirection.y), 0.0, 1.0), 6.0);
-  color = mix(color, uSunsetHorizon, glow * uFinale * 0.55);
+  // V0.3 水彩云雾晕染：地平线上方带微动云团层次
+  vec2 skyUv = vSkyDirection.xz / (abs(vSkyDirection.y) + 0.22);
+  float cloud = skyFbm(skyUv * 0.85 + vec2(uTime * 0.008, uTime * 0.004));
+  float cloudBand = smoothstep(0.46, 0.72, height) * smoothstep(0.95, 0.58, height);
+  vec3 openCloud = vec3(0.975, 0.96, 0.93);
+  vec3 sunsetCloud = mix(vec3(0.98, 0.84, 0.74), vec3(0.76, 0.71, 0.82), smoothstep(0.54, 0.76, height));
+  vec3 cloudTint = mix(openCloud, sunsetCloud, uFinale);
+  color = mix(color, cloudTint, smoothstep(0.42, 0.76, cloud) * cloudBand * mix(0.24, 0.58, uFinale));
+
+  // 地平线附近再压一层暖金晕染，让结局的「天边发亮」可读
+  float glow = pow(clamp(1.0 - abs(vSkyDirection.y), 0.0, 1.0), 5.0);
+  color = mix(color, uSunsetHorizon, glow * uFinale * 0.62);
 
   gl_FragColor = vec4(color, 1.0);
 }
@@ -69,10 +102,10 @@ export class Atmosphere {
   private scene: Scene | null = null;
   private sky: Mesh<SphereGeometry, ShaderMaterial> | null = null;
 
-  private readonly baseBackground = new Color(0xf2ede4);
-  private readonly baseFog = new Color(0xf2ede4);
-  private readonly baseZenith = new Color(0xd8d2c6);
-  private readonly baseHorizon = new Color(0xf6f1e8);
+  private readonly baseBackground = new Color(0xf4efe5);
+  private readonly baseFog = new Color(0xf4efe5);
+  private readonly baseZenith = new Color(0xe2dbd0);
+  private readonly baseHorizon = new Color(0xf7f2e8);
 
   private readonly sunsetColor: Color;
   private readonly sunsetHorizon: Color;
@@ -97,9 +130,9 @@ export class Atmosphere {
     const fog = scene.fog as Fog | null;
     if (fog) this.baseFog.copy(fog.color);
 
-    // 开场天空：接近纸色的冷白，向上略偏灰蓝，保持「暖纸 + 淡天空」
+    // 开场天空：接近暖纸色的柔米白，向上略偏淡暖灰
     this.baseHorizon.copy(this.baseBackground);
-    this.baseZenith.copy(this.baseBackground).offsetHSL(0.02, 0.02, -0.06);
+    this.baseZenith.copy(this.baseBackground).offsetHSL(0.02, 0.01, -0.05);
 
     if (this.options.enableSkyDome === false) return;
 
@@ -108,6 +141,7 @@ export class Atmosphere {
         uZenithColor: { value: this.baseZenith.clone() },
         uHorizonColor: { value: this.baseHorizon.clone() },
         uFinale: { value: 0 },
+        uTime: { value: 0 },
         uSunsetZenith: { value: this.sunsetColor.clone() },
         uSunsetHorizon: { value: this.sunsetHorizon.clone() },
       },
@@ -127,7 +161,7 @@ export class Atmosphere {
     this.sky = sky;
   }
 
-  /** 结局程度 0..1：0 = 开场暖纸，1 = 淡桃暖橙。 */
+  /** 结局程度 0..1：0 = 开场暖纸，1 = 淡桃暖橙云霞。 */
   setFinale(value: number): void {
     const next = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
     if (Math.abs(next - this.finale) < 0.002) return;
@@ -142,11 +176,17 @@ export class Atmosphere {
 
     const fog = scene.fog as Fog | null;
     if (fog) {
-      fog.color.copy(this.baseFog).lerp(this.sunsetHorizon, this.finale * 0.72);
+      fog.color.copy(this.baseFog).lerp(this.sunsetHorizon, this.finale * 0.65);
     }
 
     if (this.sky) {
       this.sky.material.uniforms["uFinale"]!.value = this.finale;
+    }
+  }
+
+  setTime(seconds: number): void {
+    if (this.sky && Number.isFinite(seconds)) {
+      this.sky.material.uniforms["uTime"]!.value = seconds;
     }
   }
 
