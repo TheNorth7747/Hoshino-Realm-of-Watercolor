@@ -8,11 +8,11 @@
  */
 import {
   BufferGeometry,
+  CircleGeometry,
   Float32BufferAttribute,
   Group,
   InstancedMesh,
   Object3D,
-  PlaneGeometry,
   Vector3,
 } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
@@ -112,13 +112,13 @@ function makeBladeGeometry(): BufferGeometry {
   return makeArchedBlade(0.08, 0.055, 0.44);
 }
 
-/** 交叉双面片花头（4 三角面），替代多面体小球。 */
+/** 交叉双五瓣花冠片（10 三角面），替代方片或低模小球。 */
 function makeFlowerHeadGeometry(): BufferGeometry {
-  const a = new PlaneGeometry(0.18, 0.14);
-  a.rotateX(-0.35);
-  const b = new PlaneGeometry(0.18, 0.14);
-  b.rotateY(Math.PI * 0.5);
-  b.rotateX(-0.35);
+  const a = new CircleGeometry(0.1, 5);
+  a.rotateX(-0.52);
+  const b = new CircleGeometry(0.09, 5);
+  b.rotateY(Math.PI * 0.48);
+  b.rotateX(-0.62);
   const merged = mergeGeometries([a, b]);
   a.dispose();
   b.dispose();

@@ -372,10 +372,14 @@ float wcRevealTotal = wcReveal + wcFinale * wcDistant;
 
 // V0.3 结局全域水彩漫延波：花树绽放后从花树向整片林间草野平缓推进，平时 uGlobalReveal=0
 if (uGlobalReveal > 0.001 && wcInBounds > 0.5) {
-	float wcTreeDist = distance(wcWorld, vec2(0.0, -22.0));
-	float wcWaveRadius = mix(0.0, 108.0, uGlobalReveal);
-	float wcWave = 1.0 - smoothstep(wcWaveRadius - 16.0, wcWaveRadius + 2.0, wcTreeDist + wcEdgeNoise * 7.0);
-	wcRevealTotal = max(wcRevealTotal, wcWave * uGlobalReveal);
+	if (uGlobalReveal >= 0.999) {
+		wcRevealTotal = 1.0;
+	} else {
+		float wcTreeDist = distance(wcWorld, vec2(0.0, -22.0));
+		float wcWaveRadius = mix(0.0, 108.0, uGlobalReveal);
+		float wcWave = 1.0 - smoothstep(wcWaveRadius - 16.0, wcWaveRadius + 2.0, wcTreeDist + wcEdgeNoise * 7.0);
+		wcRevealTotal = max(wcRevealTotal, wcWave * uGlobalReveal);
+	}
 }
 
 vec3 wcPaper = uPaperColor * (0.97 + 0.05 * wcGrain);
@@ -410,6 +414,13 @@ if ((uWcMode > 0.5 && uWcMode < 1.5) || uWcMode > 4.5) {
 	vec4 wcPaintCard = texture2D(uPaintMap, vWatercolorUv);
 	vec4 wcSketchCard = texture2D(uSketchMap, vWatercolorUv);
 	float wcCardAlpha = mix(wcSketchCard.a, wcPaintCard.a, smoothstep(0.14, 0.82, wcMasked));
+	if (uWcMode > 4.5) {
+		// 垂柳长帘切出纵向细密枝条缕感，避免大片实体绿块
+		float wcStrandNoise = wcNoise(vec2(vWatercolorUv.x * 16.0, vWatercolorUv.y * 5.0));
+		float wcStrand = 0.42 + 0.58 * abs(sin(vWatercolorUv.x * 24.0 + wcStrandNoise * 2.6));
+		float wcTipTaper = smoothstep(0.02, 0.28, vWatercolorUv.y) * smoothstep(1.0, 0.82, vWatercolorUv.y);
+		wcCardAlpha *= wcStrand * (0.45 + 0.55 * wcTipTaper);
+	}
 	if (wcCardAlpha < uAlphaCutoff) discard;
 
 	float wcShadeFactor = clamp(vWatercolorUv.y * 0.7 + max(vWatercolorNormal.y, 0.0) * 0.3, 0.0, 1.0);
@@ -444,12 +455,16 @@ if ((uWcMode > 0.5 && uWcMode < 1.5) || uWcMode > 4.5) {
 	float wcBankFade = smoothstep(0.0, 0.16, vWatercolorUv.y) * smoothstep(1.0, 0.84, vWatercolorUv.y);
 	diffuseColor.a *= wcBankFade * mix(0.32, 0.84, wcMasked);
 } else if (uWcMode > 3.5 && uWcMode < 4.5) {
-	// mountain (4)：未显色为方向性山坡铅笔斜排线，显色为柔和层叠水彩山色
+	// mountain (4)：未显色为柔和山形铅笔轮廓与棉浆纸纹，显色后用球极角+高度坐标避免垂直拉伸条纹
 	float wcRidgeHeight = clamp(vWatercolorUv.y, 0.0, 1.0);
-	float wcSlopeHatch = 1.0 - smoothstep(0.0, 0.22, abs(fract(wcWorld.x * 0.24 + vWatercolorWorldPosition.y * 0.42) - 0.5));
-	float wcRidgeLine = smoothstep(0.92, 0.99, wcRidgeHeight);
-	vec3 wcMtnInk = mix(wcPaper, uInkColor, clamp((wcSlopeHatch * 0.26 + wcRidgeLine * 0.45) * mix(0.25, 1.0, wcRidgeHeight), 0.0, 0.75));
-	vec3 wcMtnPaint = mix(wcPaper, wcPaintUsed, smoothstep(0.04, 0.48, wcRidgeHeight));
+	float wcMtnAngle = atan(wcWorld.y, wcWorld.x);
+	vec2 wcMtnCoord = vec2(wcMtnAngle * 14.0, vWatercolorWorldPosition.y * 0.25);
+	float wcMtnWash = smoothstep(0.18, 0.86, wcPaperGrain(wcMtnCoord * 0.4));
+	float wcRidgeLine = smoothstep(0.935, 0.995, wcRidgeHeight);
+	vec3 wcMtnInk = mix(wcPaper, uInkColor, clamp((wcMtnWash * 0.08 + wcRidgeLine * 0.36) * mix(0.2, 1.0, wcRidgeHeight), 0.0, 0.55));
+	vec3 wcMtnPaintBase = clamp(vec3(wcLuma) + (wcPaint - vec3(wcLuma)) * mix(1.0, uFinaleSaturation, uFinaleReveal), 0.0, 1.0);
+	wcMtnPaintBase *= 0.94 + 0.09 * wcMtnWash;
+	vec3 wcMtnPaint = mix(wcMtnPaintBase * 0.9, wcMtnPaintBase, smoothstep(0.0, 0.38, wcRidgeHeight));
 	wcFinal = mix(wcMtnInk, wcMtnPaint, wcMasked);
 }
 

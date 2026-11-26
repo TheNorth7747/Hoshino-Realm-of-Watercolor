@@ -70,7 +70,7 @@ test("M3：三节点自由探索闭环、无弹窗遮挡与重置", async ({ pag
   await clickNode(page, "tree");
   expect((await readExploreState(page)).step).toBe("finished");
   await expect
-    .poll(async () => (await readExploreState(page)).finished, { timeout: 15_000 })
+    .poll(async () => (await readExploreState(page)).finished, { timeout: 45_000 })
     .toBe(true);
 
   // 5) 点击极简 HUD 重置按钮：探索进度清零、染色回到开场基线

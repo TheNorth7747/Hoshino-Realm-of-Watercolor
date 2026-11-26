@@ -59,9 +59,11 @@ test("M4：花树完成触发花瓣，受上限约束并回收", async ({ page }
   expect(burst?.petals.active ?? 0).toBeGreaterThan(0);
   expect(burst?.petals.peak ?? 0).toBeLessThanOrEqual(burst?.petals.capacity ?? 0);
 
-  // 花瓣寿命上限 2.4s 游戏时间；V0.2 密林在 SwiftShader 软渲染下帧率较低且 delta 截断 0.05s，
-  // 需给足 12s 墙钟确保推进超过 2.4s 游戏时间并全部回收
-  await page.waitForTimeout(12_000);
+  // 花瓣寿命上限 2.4s 游戏时间；V0.3 在 SwiftShader 软渲染下帧率较低且 delta 截断 0.05s，
+  // 轮询等待花瓣彻底回收（不减弱断言：active 仍须归零）
+  await expect
+    .poll(async () => (await vfxStats(page))?.petals.active ?? -1, { timeout: 45_000 })
+    .toBe(0);
   const settled = await vfxStats(page);
   expect(settled?.petals.active).toBe(0);
   expect(settled?.petals.peak ?? 0).toBeLessThanOrEqual(settled?.petals.capacity ?? 0);
