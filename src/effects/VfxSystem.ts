@@ -10,7 +10,14 @@
 import type { Vector3 } from "three";
 import type { DebugValue, EventBusLike, GameContext, GameSystem } from "../core/contracts";
 import { landmarkPosition } from "../config/world";
-import { PetalEmitter, defaultRandom, type ParticleCounts, type RandomSource } from "./Petals";
+import {
+  PetalEmitter,
+  defaultRandom,
+  type ParticleCounts,
+  type PetalLayerCounts,
+  type PetalLayerSpec,
+  type RandomSource,
+} from "./Petals";
 import { RippleEmitter } from "./Ripples";
 
 export interface VfxSystemOptions {
@@ -23,12 +30,22 @@ export interface VfxSystemOptions {
   readonly petalsPerBloom?: number;
   readonly petalLifetimeSeconds?: number;
   readonly rippleLifetimeSeconds?: number;
+  /** 横向风漂移基准速度（m/s），各层再乘 windScale。 */
+  readonly windSpeed?: number;
+  /** 下落终端速度（m/s）。 */
+  readonly petalMaxFallSpeed?: number;
+  /** 可注入分层配置（测试用）；默认 PETAL_LAYERS。 */
+  readonly petalLayers?: readonly PetalLayerSpec[];
   readonly random?: RandomSource;
 }
 
 export interface VfxStats {
   readonly petals: ParticleCounts;
   readonly ripples: ParticleCounts;
+  /** V0.2：近/中/远景当前活跃花瓣数，供结构断言与调试面板读取。 */
+  readonly petalLayerCounts: PetalLayerCounts;
+  /** V0.2：透明覆盖面积比（相对单层同容量全尺寸基准）。 */
+  readonly overlayAreaRatio: number;
   readonly treeBursts: number;
   readonly resets: number;
 }
@@ -63,6 +80,11 @@ export class VfxSystem implements GameSystem {
       ...(options.petalLifetimeSeconds !== undefined
         ? { lifetimeSeconds: options.petalLifetimeSeconds }
         : {}),
+      ...(options.windSpeed !== undefined ? { windSpeed: options.windSpeed } : {}),
+      ...(options.petalMaxFallSpeed !== undefined
+        ? { maxFallSpeed: options.petalMaxFallSpeed }
+        : {}),
+      ...(options.petalLayers !== undefined ? { layers: options.petalLayers } : {}),
     });
     this.ripples = new RippleEmitter({
       capacity: options.rippleCapacity ?? DEFAULT_RIPPLE_CAPACITY,
@@ -108,6 +130,10 @@ export class VfxSystem implements GameSystem {
         return {
           "vfx.petals.active": stats.petals.active,
           "vfx.petals.peak": stats.petals.peak,
+          "vfx.petals.near": stats.petalLayerCounts.near,
+          "vfx.petals.mid": stats.petalLayerCounts.mid,
+          "vfx.petals.far": stats.petalLayerCounts.far,
+          "vfx.petals.overlayRatio": Number(stats.overlayAreaRatio.toFixed(3)),
           "vfx.ripples.active": stats.ripples.active,
           "vfx.treeBursts": stats.treeBursts,
           "vfx.resets": stats.resets,
@@ -125,6 +151,8 @@ export class VfxSystem implements GameSystem {
     return {
       petals: this.petals.counts,
       ripples: this.ripples.counts,
+      petalLayerCounts: this.petals.layerCounts,
+      overlayAreaRatio: this.petals.overlayAreaRatio(),
       treeBursts: this.treeBursts,
       resets: this.resets,
     };

@@ -1,0 +1,122 @@
+{
+  "note": "V0.2 real-game screenshots from the running page; no reference frames or static composites.",
+  "spec": "1280x720, debug UI hidden, real Chrome GPU (not SwiftShader)",
+  "device": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002520) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "dpr": 1,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "realMovementPlayerZ": {
+    "spawn": 32,
+    "flower": 19.798028073687455,
+    "stream": 7.436576037299025,
+    "tree": -20.9
+  },
+  "shots": [
+    {
+      "id": "opening",
+      "file": "01-opening.png",
+      "bytes": 1281436,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "intro",
+        "shards": "0/3",
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "endingVisible": false
+      }
+    },
+    {
+      "id": "flower-hill",
+      "file": "02-flower-hill.png",
+      "bytes": 1248288,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "stream",
+        "shards": "1/3",
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "endingVisible": false
+      }
+    },
+    {
+      "id": "stream",
+      "file": "03-stream.png",
+      "bytes": 1211163,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "tree",
+        "shards": "2/3",
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "endingVisible": false
+      }
+    },
+    {
+      "id": "flower-tree",
+      "file": "04-flower-tree.png",
+      "bytes": 1069418,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "finished",
+        "shards": "3/3",
+        "petalsActive": 58,
+        "petalLayers": {
+          "near": 10,
+          "mid": 26,
+          "far": 22
+        },
+        "cameraFinale": true,
+        "finaleReveal": 0.8479568982059053,
+        "endingVisible": false
+      }
+    },
+    {
+      "id": "ending",
+      "file": "05-ending.png",
+      "bytes": 1062810,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "finished",
+        "shards": "3/3",
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": true,
+        "finaleReveal": 1,
+        "endingVisible": true
+      }
+    }
+  ],
+  "runtimeErrors": []
+}

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { CAMERA_DEFAULT_DISTANCE, CAMERA_FINALE_DISTANCE } from "../../src/player/CameraRig";
 
 /**
  * RC 验收：两个 P0 修复的集成 e2e（结局镜头拉远 + 远山显色），
@@ -79,15 +80,17 @@ test("RC-01：花树完成后镜头平滑拉远至 13m，无硬切、reset 复�
   const before = await readCamera(page);
   expect(before).not.toBeNull();
   expect(before?.active).toBe(false);
-  expect(before?.distance).toBeCloseTo(8, 1); // CAMERA_DEFAULT_DISTANCE
+  // 读取共享常量而非硬编码：Agent 2 若获准把默认距离由 8m 改为 5m，
+  // 断言语义（初始距离 == 契约默认值）不变，不需要删断言或放宽阈值。
+  expect(before?.distance).toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 1);
 
   await reachFinale(page);
 
   // 立刻应进入运镜态（不等 game:finished 的结局 UI）
   const t0 = await readCamera(page);
   expect(t0?.active).toBe(true);
-  expect(t0?.finaleTarget).toBeCloseTo(13, 5); // CAMERA_FINALE_DISTANCE
-  expect(t0?.distance).toBeLessThan(13); // 还在过渡中，未硬切
+  expect(t0?.finaleTarget).toBeCloseTo(CAMERA_FINALE_DISTANCE, 5);
+  expect(t0?.distance).toBeLessThan(CAMERA_FINALE_DISTANCE); // 还在过渡中，未硬切
 
   // 采样收敛过程：单调递增、逐帧增量有上限（平滑）、最终逼近 13m
   const distances: number[] = [t0?.distance ?? 0];
@@ -103,16 +106,18 @@ test("RC-01：花树完成后镜头平滑拉远至 13m，无硬切、reset 复�
   // 平滑性（无硬切）的严格逐帧断言由 A2 单测 finale-camera.test.ts 覆盖：
   // 每帧增量 <0.2m。e2e 层无法逐帧采样，这里验证端到端的三个本质特征：
   // 1) 首帧未一步到位；2) 单调不回退（上面已断言）；3) 收敛到目标且不过冲。
-  expect(distances[1] ?? 0).toBeLessThan(13); // 过渡开始后仍未到顶，非硬切
-  expect(distances.at(-1) ?? 0).toBeGreaterThan(11); // 已明显拉远并逼近目标
-  expect(distances.at(-1) ?? 0).toBeLessThanOrEqual(13.001); // 不过冲
+  expect(distances[1] ?? 0).toBeLessThan(CAMERA_FINALE_DISTANCE); // 过渡开始后仍未到顶，非硬切
+  // 保留原有拉远幅度阈值 11m（不降低）：结局契约 13m 未变，
+  // 且默认距离即便由 8m 改为 5m，1.8s 阻尼推进后仍 >11m。
+  expect(distances.at(-1) ?? 0).toBeGreaterThan(11);
+  expect(distances.at(-1) ?? 0).toBeLessThanOrEqual(CAMERA_FINALE_DISTANCE + 0.001); // 不过冲
 
   // reset 复位到默认距离与可用输入
   await page.evaluate(() => window.__STARWATER__?.game.reset());
   await page.waitForTimeout(120);
   const afterReset = await readCamera(page);
   expect(afterReset?.active).toBe(false);
-  expect(afterReset?.distance).toBeCloseTo(8, 1);
+  expect(afterReset?.distance).toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 1);
 
   expect(errors).toEqual([]);
 });
