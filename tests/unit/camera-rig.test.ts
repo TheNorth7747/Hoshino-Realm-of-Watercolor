@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "three";
-import { CameraRig } from "../../src/player/CameraRig";
+import {
+  CameraRig,
+  CAMERA_DEFAULT_DISTANCE,
+  CAMERA_DEFAULT_PITCH,
+  CAMERA_MAX_DISTANCE,
+} from "../../src/player/CameraRig";
 import { InputState } from "../../src/player/InputState";
 import type { GameContext, PlayerSnapshot, PlayerSource } from "../../src/core/contracts";
 import { createFakeGameContext, hillyTerrain, runFrames } from "./helpers/fake-game-context";
@@ -44,21 +49,21 @@ function expectedFollowPoint(player: FakePlayer): Vector3 {
 }
 
 describe("CameraRig · 初始化与初始摆位", () => {
-  it("init 后镜头在目标 +Z 侧、距离 8m，朝向跟随点", () => {
+  it("init 后镜头在目标 +Z 侧、距离为默认常量，朝向注视点", () => {
     const { context, player, rig } = createRig();
     const follow = expectedFollowPoint(player);
     const camera = context.camera;
 
     expect(camera.position.z).toBeGreaterThan(follow.z); // 在 +Z 侧
     const offset = camera.position.clone().sub(follow);
-    expect(offset.length()).toBeCloseTo(8, 5);
-    expect(rig.getDistance()).toBeCloseTo(8, 5);
+    expect(offset.length()).toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 5);
+    expect(rig.getDistance()).toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 5);
     expect(rig.getYaw()).toBeCloseTo(0, 6);
-    expect(rig.getPitch()).toBeCloseTo(0.42, 6);
+    expect(rig.getPitch()).toBeCloseTo(CAMERA_DEFAULT_PITCH, 6);
 
-    // 视线指向跟随点。
+    // V0.2 起镜头看向“跟随点 + 前看偏移”的注视点，而不是跟随点本身。
     const view = camera.getWorldDirection(new Vector3());
-    const toTarget = follow.clone().sub(camera.position).normalize();
+    const toTarget = rig.getLookTarget().clone().sub(camera.position).normalize();
     expect(view.dot(toTarget)).toBeGreaterThan(0.999);
   });
 });
@@ -83,7 +88,10 @@ describe("CameraRig · 平滑跟随", () => {
 
     // 镜头与跟随点保持标称距离。
     const camera = context.camera;
-    expect(camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(8, 2);
+    expect(camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(
+      CAMERA_DEFAULT_DISTANCE,
+      2,
+    );
   });
 
   it("跟随移动中的玩家：有滞后但不脱离标称距离", () => {
@@ -97,7 +105,10 @@ describe("CameraRig · 平滑跟随", () => {
     const lag = rig.getFollowPoint().z - player.position.z;
     expect(lag).toBeGreaterThan(0.05);
     expect(lag).toBeLessThan(1.0);
-    expect(context.camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(8, 1);
+    expect(context.camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(
+      CAMERA_DEFAULT_DISTANCE,
+      1,
+    );
   });
 });
 
@@ -135,16 +146,20 @@ describe("CameraRig · 鼠标拖拽旋转（PRD 9.3）", () => {
     expect(rig.getPitch()).toBeCloseTo(0.08, 6);
   });
 
-  it("旋转后镜头仍保持标称距离并看向跟随点", () => {
+  it("旋转后镜头仍保持标称距离并看向注视点（前看随 yaw 一起转）", () => {
     const { context, input, rig } = createRig();
     input.setDragging(true);
     input.addMouseDelta(300, 150);
     rig.update(1 / 60, context);
 
     const camera = context.camera;
-    expect(camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(8, 5);
+    expect(camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(
+      CAMERA_DEFAULT_DISTANCE,
+      5,
+    );
+    // 注视点随 yaw 旋转到镜头前方，视线仍精确对准它。
     const view = camera.getWorldDirection(new Vector3());
-    const toTarget = rig.getFollowPoint().clone().sub(camera.position).normalize();
+    const toTarget = rig.getLookTarget().clone().sub(camera.position).normalize();
     expect(view.dot(toTarget)).toBeGreaterThan(0.999);
   });
 });
@@ -152,18 +167,19 @@ describe("CameraRig · 鼠标拖拽旋转（PRD 9.3）", () => {
 describe("CameraRig · 滚轮缩放（PRD 9.3）", () => {
   it("向下滚拉远、向上滚拉近，实际距离平滑追踪", () => {
     const { context, input, rig } = createRig();
+    const base = CAMERA_DEFAULT_DISTANCE;
     input.addWheelDelta(120); // e^{0.18} ≈ 1.197
     rig.update(1 / 60, context);
     const afterOneFrame = rig.getDistance();
-    expect(afterOneFrame).toBeGreaterThan(8);
-    expect(afterOneFrame).toBeLessThan(8 * Math.exp(0.18)); // 平滑，未一步到位
+    expect(afterOneFrame).toBeGreaterThan(base);
+    expect(afterOneFrame).toBeLessThan(base * Math.exp(0.18)); // 平滑，未一步到位
 
     runFrames(rig, context, 120);
-    expect(rig.getDistance()).toBeCloseTo(8 * Math.exp(0.18), 1);
+    expect(rig.getDistance()).toBeCloseTo(base * Math.exp(0.18), 1);
 
-    input.addWheelDelta(-240); // 目标 = 8·e^{0.18-0.36} = 8·e^{-0.18}
+    input.addWheelDelta(-240); // 目标 = base·e^{0.18-0.36}
     runFrames(rig, context, 120);
-    expect(rig.getDistance()).toBeCloseTo(8 * Math.exp(-0.18), 1);
+    expect(rig.getDistance()).toBeCloseTo(base * Math.exp(-0.18), 1);
   });
 
   it("持续滚动缩放钳制在 [3, 14] 米", () => {
@@ -172,7 +188,7 @@ describe("CameraRig · 滚轮缩放（PRD 9.3）", () => {
       input.addWheelDelta(500);
       rig.update(1 / 60, context);
     }
-    expect(rig.getDistance()).toBeCloseTo(14, 3);
+    expect(rig.getDistance()).toBeCloseTo(CAMERA_MAX_DISTANCE, 3);
 
     for (let i = 0; i < 240; i += 1) {
       input.addWheelDelta(-500);
@@ -224,24 +240,27 @@ describe("CameraRig · delta 截断与 reset", () => {
     input.addWheelDelta(500);
     player.position.set(20, 0, -30);
     runFrames(rig, context, 60);
-    expect(rig.getDistance()).not.toBeCloseTo(8, 2);
+    expect(rig.getDistance()).not.toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 2);
 
     // 真实集成顺序：player 阶段先复位到出生点，camera 阶段随后读取快照。
     player.position.set(0, 0, 32);
     context.events.emit("game:reset");
     expect(rig.getYaw()).toBeCloseTo(0, 6);
-    expect(rig.getPitch()).toBeCloseTo(0.42, 6);
-    expect(rig.getDistance()).toBeCloseTo(8, 5);
+    expect(rig.getPitch()).toBeCloseTo(CAMERA_DEFAULT_PITCH, 6);
+    expect(rig.getDistance()).toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 5);
     expect(rig.getFollowPoint().x).toBeCloseTo(0, 5);
     expect(rig.getFollowPoint().y).toBeCloseTo(0 + 1.5, 5); // 头部偏移在 Y 轴（出生点 y=0）
     expect(rig.getFollowPoint().z).toBeCloseTo(32, 5);
-    expect(context.camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(8, 5);
+    expect(context.camera.position.distanceTo(rig.getFollowPoint())).toBeCloseTo(
+      CAMERA_DEFAULT_DISTANCE,
+      5,
+    );
   });
 
   it("注册 camera 调试 stat source（AC-11）", () => {
     const { context } = createRig();
     const stats = context.debug.readStats();
     expect(stats["camera.cameraYaw"]).toBe(0);
-    expect(stats["camera.cameraDistance"]).toBeCloseTo(8, 5);
+    expect(stats["camera.cameraDistance"]).toBeCloseTo(CAMERA_DEFAULT_DISTANCE, 5);
   });
 });

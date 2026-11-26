@@ -4,7 +4,7 @@ import type { PerspectiveCamera } from "three";
 import { PlayerController } from "../../src/player/PlayerController";
 import { PLAYER_MOVE_SPEED } from "../../src/player/PlayerController";
 import { applyKeyEvent } from "../../src/player/InputState";
-import { PLAYER_PLACEHOLDER_NAME } from "../../src/player/playerPlaceholder";
+import { PLAYER_PLACEHOLDER_NAME } from "../../src/player/heroCharacter";
 import type { GameContext, PlayerSnapshot, PlayerSource } from "../../src/core/contracts";
 import { WORLD_BOUNDS, sampleTerrainHeight } from "../../src/config/world";
 import {
