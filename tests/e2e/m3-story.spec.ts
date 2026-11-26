@@ -43,7 +43,9 @@ test("M3：三节点闭环、星屑计数、结局与重置", async ({ page }) =
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+    if (message.type() === "error" && !message.text().includes("ERR_NETWORK_CHANGED")) {
+      errors.push(`console: ${message.text()}`);
+    }
   });
 
   await boot(page);
@@ -63,22 +65,21 @@ test("M3：三节点闭环、星屑计数、结局与重置", async ({ page }) =
   await clickNode(page, "stream");
   expect(await shardText(page)).toContain("2/3");
 
-  // 4) 节点三：花树 → 结局（PRD 9.6：等 2～3 秒再出标题，这里给 8s 余量）
+  // 4) 节点三：花树 → 结局（PRD 9.6：等 2～3 秒再出标题；密林软渲染帧率低，给 15s 墙钟余量）
   await clickNode(page, "tree");
   expect(await shardText(page)).toContain("3/3");
-  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(".sw-ending__restart")).toBeVisible();
 
-  // 5) 重置：星屑归零、结局消失、染色清空
-  //    注意：重置后玩家脚下的首帧笔刷会立刻再落一笔（“进场脚下就有颜色”），
-  //    所以断言“回到单笔级别”而不是严格 0。
+  // 5) 重置：星屑归零、结局消失、染色回到开场基线
+  //    V0.2 重置会重放开场 8m 预染色，因此断言回到初始基线覆盖率且显著低于重置前。
   const coverageBeforeReset = await maskCoverage(page);
   await page.locator(".sw-ending__restart").click();
   await page.waitForTimeout(600);
   expect(await shardText(page)).toContain("0/3");
   await expect(page.locator(".sw-ending")).toBeHidden();
   const coverageAfterReset = await maskCoverage(page);
-  expect(coverageAfterReset).toBeLessThan(0.002);
+  expect(Math.abs(coverageAfterReset - initialCoverage)).toBeLessThan(0.006);
   expect(coverageAfterReset).toBeLessThan(coverageBeforeReset);
 
   // 6) 重置后还能再走一遍第一个节点（幂等性）

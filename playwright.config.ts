@@ -11,7 +11,8 @@ export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: false,
   workers: 1,
-  timeout: 60_000,
+  // V0.2 密林场景（~158k 三角面）在 SwiftShader 软渲染下约 7～12 FPS，放宽单测超时以免误杀
+  timeout: 120_000,
   expect: { timeout: 10_000 },
   reporter: [["list"]],
   use: {

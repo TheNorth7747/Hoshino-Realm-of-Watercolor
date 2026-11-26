@@ -63,7 +63,9 @@ async function readState(page: Page) {
       maskUuid: mask?.texture.uuid ?? null,
       uniformMaskUuid: reveal?.revealUniforms?.uRevealMask.value.uuid ?? null,
       atPlayer: snapshot ? at(snapshot.position.x, snapshot.position.z) : -1,
-      atMirror: snapshot ? at(-snapshot.position.x, snapshot.position.z) : -1,
+      // V0.2 笔刷加宽至 2.8m 且开场有 8m 预染色，镜像探针沿 X 轴对称外移 10m 避开开场色域与走廊，
+      // 保持「世界左侧未走过区域保持干净（非屏幕空间滤镜）」的严格语义。
+      atMirror: snapshot ? at(-snapshot.position.x - 10, snapshot.position.z) : -1,
     };
   });
 }

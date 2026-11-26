@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type { DebugSnapshot } from "../../src/core/contracts";
+import { V02_BRUSH_RADIUS } from "../../src/rendering/RevealSystem";
 
 // `window.__STARWATER__` / `__STARWATER_REVEAL__` / `__STARWATER_REVEAL_STATE__`
 // 的全局类型由 src/main.ts 与 src/rendering/devHarness.ts 声明，这里不再重复声明。
@@ -89,7 +90,7 @@ test("A1：调试视图显示遮罩缩略图与笔刷信息", async ({ page }) =
   const debugRoot = page.locator("#debug-root");
   await expect(debugRoot).toBeVisible();
   await expect(debugRoot).toContainText("染色遮罩（世界坐标）");
-  await expect(debugRoot).toContainText("笔刷 1.60m");
+  await expect(debugRoot).toContainText(`笔刷 ${V02_BRUSH_RADIUS.toFixed(2)}m`);
 
   const hasCanvas = await page.evaluate(() => {
     const canvas = document.querySelector("#debug-root canvas");

@@ -226,6 +226,9 @@ export class Game implements SystemRegistry {
   }
 
   private renderFrame(): void {
+    for (const system of this.registered) {
+      if (system.renderFrame?.(this.context)) return;
+    }
     this.rendererBundle.renderer.render(this.scaffold.scene, this.scaffold.camera);
   }
 

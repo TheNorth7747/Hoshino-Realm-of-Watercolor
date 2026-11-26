@@ -240,6 +240,8 @@ export interface GameSystem {
   readonly phase: SystemPhase;
   init?(context: GameContext): void;
   update?(deltaSeconds: number, context: GameContext): void;
+  /** 可选渲染接管钩子：返回 true 表示本帧已由该系统完成渲染（跳过默认 renderer.render）。 */
+  renderFrame?(context: GameContext): boolean;
   resize?(width: number, height: number): void;
   dispose?(): void;
 }
