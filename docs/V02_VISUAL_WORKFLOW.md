@@ -1,7 +1,7 @@
 # Hoshino V0.2 视觉贴近版 · 四 Agent 指挥手册
 
 > 基线：`main@f13fd7b`，标签 `v0.1.0-rc.1`
-> 项目根目录：`D:/obsidian_md/starwater-demo`
+> 项目根目录：`D:/obsidian_md/hoshino/starwater-demo`
 > 需求文档：`docs/PRD.md`
 > 目标：尽量贴近参考视频的镜头、色彩、森林密度、角色和结局氛围。
 > 本轮只做视觉与表现，不新增故事、地图、战斗、背包或其他玩法。
@@ -14,10 +14,10 @@
 
 | Agent | 本轮任务 | 分支 | 工作目录 | 允许修改 |
 |---|---|---|---|---|
-| Agent 1 | 染色覆盖、线稿、天空、光照；最终集成 | `visual/reveal-grade` | `D:/obsidian_md/hoshino-v02-render` | `src/rendering/**`、必要的核心灯光配置、渲染接线与自身测试 |
-| Agent 2 | 默认镜头、结局构图、红斗篷角色、走跑动作 | `visual/camera-hero` | `D:/obsidian_md/hoshino-v02-camera` | `src/player/**`、自身原创角色资产与测试 |
-| Agent 3 | 小径、草木、普通树、花树、溪流视觉 | `visual/world-art` | `D:/obsidian_md/hoshino-v02-world` | `src/world/**`、自身新增场景资产与测试 |
-| Agent 4 | 花瓣层次、视觉截图、性能与回归验收 | `visual/vfx-qa` | `D:/obsidian_md/hoshino-v02-qa` | `src/effects/**`、测试与验收报告 |
+| Agent 1 | 染色覆盖、线稿、天空、光照；最终集成 | `visual/reveal-grade` | `D:/obsidian_md/hoshino/worktrees/v02-render` | `src/rendering/**`、必要的核心灯光配置、渲染接线与自身测试 |
+| Agent 2 | 默认镜头、结局构图、红斗篷角色、走跑动作 | `visual/camera-hero` | `D:/obsidian_md/hoshino/worktrees/v02-camera` | `src/player/**`、自身原创角色资产与测试 |
+| Agent 3 | 小径、草木、普通树、花树、溪流视觉 | `visual/world-art` | `D:/obsidian_md/hoshino/worktrees/v02-world` | `src/world/**`、自身新增场景资产与测试 |
+| Agent 4 | 花瓣层次、视觉截图、性能与回归验收 | `visual/vfx-qa` | `D:/obsidian_md/hoshino/worktrees/v02-qa` | `src/effects/**`、测试与验收报告 |
 
 本轮额外限制：
 
@@ -53,14 +53,14 @@
 
 ## 3. 阶段 0：用户先发给 Agent 1 的总控 Prompt
 
-在 `D:/obsidian_md/starwater-demo` 的 Agent 1 主会话中发送：
+在 `D:/obsidian_md/hoshino/starwater-demo` 的 Agent 1 主会话中发送：
 
 ```text
 你是 Hoshino V0.2 视觉贴近版的集成负责人。现在只做准备，不开发业务功能。
 
 先阅读：
-- D:/obsidian_md/starwater-demo/docs/PRD.md
-- D:/obsidian_md/starwater-demo/docs/V02_VISUAL_WORKFLOW.md
+- D:/obsidian_md/hoshino/starwater-demo/docs/PRD.md
+- D:/obsidian_md/hoshino/starwater-demo/docs/V02_VISUAL_WORKFLOW.md
 
 当前基线应为 main@f13fd7b / v0.1.0-rc.1。请：
 1. 核对 main 工作区干净、与 origin/main 同步，记录实际提交哈希。
@@ -75,12 +75,12 @@
 若由用户自己建立 worktree，在 Git Bash 执行：
 
 ```bash
-cd "D:/obsidian_md/starwater-demo"
+cd "D:/obsidian_md/hoshino/starwater-demo"
 git fetch origin
-git worktree add -b visual/reveal-grade "D:/obsidian_md/hoshino-v02-render" origin/main
-git worktree add -b visual/camera-hero "D:/obsidian_md/hoshino-v02-camera" origin/main
-git worktree add -b visual/world-art "D:/obsidian_md/hoshino-v02-world" origin/main
-git worktree add -b visual/vfx-qa "D:/obsidian_md/hoshino-v02-qa" origin/main
+git worktree add -b visual/reveal-grade "D:/obsidian_md/hoshino/worktrees/v02-render" origin/main
+git worktree add -b visual/camera-hero "D:/obsidian_md/hoshino/worktrees/v02-camera" origin/main
+git worktree add -b visual/world-art "D:/obsidian_md/hoshino/worktrees/v02-world" origin/main
+git worktree add -b visual/vfx-qa "D:/obsidian_md/hoshino/worktrees/v02-qa" origin/main
 ```
 
 四个 Agent 首次进入各自目录后均执行 `npm install`，不得自行升级依赖。
@@ -91,14 +91,14 @@ git worktree add -b visual/vfx-qa "D:/obsidian_md/hoshino-v02-qa" origin/main
 
 ### 4.1 Agent 1：染色、线稿、天空与光照
 
-工作目录：`D:/obsidian_md/hoshino-v02-render`
+工作目录：`D:/obsidian_md/hoshino/worktrees/v02-render`
 
 ```text
 你是 Hoshino V0.2 的 Agent 1，本轮只负责染色覆盖、线稿、天空和光照，不负责场景几何或角色模型。
 
-先阅读当前 worktree 的 docs/PRD.md 与 D:/obsidian_md/starwater-demo/docs/V02_VISUAL_WORKFLOW.md。
+先阅读当前 worktree 的 docs/PRD.md 与 D:/obsidian_md/hoshino/starwater-demo/docs/V02_VISUAL_WORKFLOW.md。
 本地参考帧位于：
-- D:/obsidian_md/starwater-demo/test-results/reference-video/frame-01.png（开场）
+- D:/obsidian_md/hoshino/starwater-demo/test-results/reference-video/frame-01.png（开场）
 - frame-03.png（路线）
 - frame-05.png（花树）
 - frame-07.png（结尾）
@@ -124,12 +124,12 @@ PR 必须包含修改文件、参数变化、测试结果、性能影响和截�
 
 ### 4.2 Agent 2：镜头、角色与动作
 
-工作目录：`D:/obsidian_md/hoshino-v02-camera`
+工作目录：`D:/obsidian_md/hoshino/worktrees/v02-camera`
 
 ```text
 你是 Hoshino V0.2 的 Agent 2，本轮只负责镜头、原创红斗篷角色与走跑动作，不修改 world。
 
-先阅读 docs/PRD.md、D:/obsidian_md/starwater-demo/docs/V02_VISUAL_WORKFLOW.md，并查看主目录 test-results/reference-video 下的 frame-01/03/05/07.png。
+先阅读 docs/PRD.md、D:/obsidian_md/hoshino/starwater-demo/docs/V02_VISUAL_WORKFLOW.md，并查看主目录 test-results/reference-video 下的 frame-01/03/05/07.png。
 当前分支：visual/camera-hero。
 允许修改：src/player/**、自身原创角色资产和对应测试。
 禁止修改：src/world/**、src/rendering/**、叙事/UI、共享事件和其他 Agent 文件。
@@ -150,12 +150,12 @@ PR 中列出修改文件、前后镜头参数、角色实现方式、测试结�
 
 ### 4.3 Agent 3：路径、植被、树木与溪流
 
-工作目录：`D:/obsidian_md/hoshino-v02-world`
+工作目录：`D:/obsidian_md/hoshino/worktrees/v02-world`
 
 ```text
 你是 Hoshino V0.2 的 Agent 3，本轮临时接管 src/world/** 的场景美术，不修改叙事，不修改 player 或 rendering。
 
-先阅读 docs/PRD.md、D:/obsidian_md/starwater-demo/docs/V02_VISUAL_WORKFLOW.md，并查看主目录 test-results/reference-video/frame-01/03/05/07.png。
+先阅读 docs/PRD.md、D:/obsidian_md/hoshino/starwater-demo/docs/V02_VISUAL_WORKFLOW.md，并查看主目录 test-results/reference-video/frame-01/03/05/07.png。
 当前分支：visual/world-art。
 允许修改：src/world/**、自身新增场景资产和对应测试。
 禁止修改：config/world.ts、core、rendering、player、narrative、UI 和共享事件。
@@ -178,12 +178,12 @@ PR 中列出场景数量、三角面/实例预算、修改文件、测试结果�
 
 ### 4.4 Agent 4：VFX、视觉对照与 QA
 
-工作目录：`D:/obsidian_md/hoshino-v02-qa`
+工作目录：`D:/obsidian_md/hoshino/worktrees/v02-qa`
 
 ```text
 你是 Hoshino V0.2 的 Agent 4，负责 VFX 层次、视觉对照和独立 QA，不替其他 Agent 修改业务实现。
 
-先阅读 docs/PRD.md、D:/obsidian_md/starwater-demo/docs/V02_VISUAL_WORKFLOW.md 和现有 A6/RC 验收报告。
+先阅读 docs/PRD.md、D:/obsidian_md/hoshino/starwater-demo/docs/V02_VISUAL_WORKFLOW.md 和现有 A6/RC 验收报告。
 当前分支：visual/vfx-qa。
 允许修改：src/effects/**、测试、截图采集脚本和验收报告。
 禁止修改：rendering、player、world、narrative 的业务实现；不得删除或放宽既有断言。

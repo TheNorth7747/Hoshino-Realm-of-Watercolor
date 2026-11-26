@@ -1,7 +1,7 @@
 # Hoshino: Realm of Watercolor · 四 Agent 并行开发运行手册
 
 > 项目：Hoshino: Realm of Watercolor（星野：水彩之境）
-> 项目根目录：`D:/obsidian_md/starwater-demo`
+> 项目根目录：`D:/obsidian_md/hoshino/starwater-demo`
 > 需求基线：`docs/PRD.md`
 > 远程账号：`TheNorth7747`
 > 仓库地址：`https://github.com/TheNorth7747/Hoshino-Realm-of-Watercolor`
@@ -64,7 +64,7 @@
 ### 4.1 用户操作
 
 - 打开 Agent 1 会话。
-- 工作目录设为 `D:/obsidian_md/starwater-demo`。
+- 工作目录设为 `D:/obsidian_md/hoshino/starwater-demo`。
 - 发送下面的完整 Prompt。
 - 此时 Agent 2、3、4 可以阅读 PRD，但**不要修改任何文件**。
 
@@ -74,12 +74,12 @@
 你是 Hoshino: Realm of Watercolor（星野：水彩之境）的 Agent 1，兼任架构与集成负责人。
 
 先完整阅读：
-1. D:/obsidian_md/starwater-demo/docs/PRD.md
-2. D:/obsidian_md/starwater-demo/docs/FOUR_AGENT_WORKFLOW.md
+1. D:/obsidian_md/hoshino/starwater-demo/docs/PRD.md
+2. D:/obsidian_md/hoshino/starwater-demo/docs/FOUR_AGENT_WORKFLOW.md
 
 当前只执行 PRD 的 A0，目标是完成 M0。不要提前实现 A1～A6 的业务功能。
 
-工作目录：D:/obsidian_md/starwater-demo
+工作目录：D:/obsidian_md/hoshino/starwater-demo
 
 你必须完成：
 1. 建立 TypeScript 严格模式 + Vite + Three.js 工程。
@@ -108,7 +108,7 @@
 在主目录执行：
 
 ```bash
-cd "D:/obsidian_md/starwater-demo"
+cd "D:/obsidian_md/hoshino/starwater-demo"
 npm install
 npm run typecheck
 npm run test
@@ -128,7 +128,7 @@ git push -u origin main
 在 `main` 已推送、工作区干净后执行：
 
 ```bash
-cd "D:/obsidian_md/starwater-demo"
+cd "D:/obsidian_md/hoshino/starwater-demo"
 git fetch origin
 git worktree add ../starwater-render -b agent/render
 git worktree add ../starwater-player -b agent/player
@@ -140,12 +140,12 @@ git worktree add ../starwater-effects -b agent/effects
 
 | Agent | 工作目录 | 初始分支 |
 |---|---|---|
-| Agent 1 | `D:/obsidian_md/starwater-render` | `agent/render` |
-| Agent 2 | `D:/obsidian_md/starwater-player` | `agent/player` |
-| Agent 3 | `D:/obsidian_md/starwater-narrative` | `agent/narrative` |
-| Agent 4 | `D:/obsidian_md/starwater-effects` | `agent/effects` |
+| Agent 1 | `D:/obsidian_md/hoshino/worktrees/archive/v01-render` | `agent/render` |
+| Agent 2 | `D:/obsidian_md/hoshino/worktrees/archive/v01-player` | `agent/player` |
+| Agent 3 | `D:/obsidian_md/hoshino/worktrees/archive/v01-narrative` | `agent/narrative` |
+| Agent 4 | `D:/obsidian_md/hoshino/worktrees/archive/v01-effects` | `agent/effects` |
 
-主目录 `D:/obsidian_md/starwater-demo` 保持 `main`，只用于集成。
+主目录 `D:/obsidian_md/hoshino/starwater-demo` 保持 `main`，只用于集成。
 
 每个 Agent 首次进入自己的目录后执行 `npm install`。依赖版本以 main 的 lockfile 为准，不得自行升级 Three.js。
 
@@ -155,7 +155,7 @@ git worktree add ../starwater-effects -b agent/effects
 
 ### 6.1 Agent 1：世界染色与水彩渲染
 
-工作目录：`D:/obsidian_md/starwater-render`
+工作目录：`D:/obsidian_md/hoshino/worktrees/archive/v01-render`
 
 ```text
 你是本项目的 Agent 1，当前不再执行 A0，只执行 PRD 的 A1。
@@ -164,7 +164,7 @@ git worktree add ../starwater-effects -b agent/effects
 - docs/PRD.md
 - docs/FOUR_AGENT_WORKFLOW.md
 
-工作目录：D:/obsidian_md/starwater-render
+工作目录：D:/obsidian_md/hoshino/worktrees/archive/v01-render
 当前分支：agent/render
 允许修改：src/rendering/** 和本模块对应测试。
 禁止修改：package.json、lockfile、main.ts、core/**、config/world.ts，以及其他 Agent 的目录。
@@ -191,7 +191,7 @@ git worktree add ../starwater-effects -b agent/effects
 
 ### 6.2 Agent 2：玩家控制与第三人称镜头
 
-工作目录：`D:/obsidian_md/starwater-player`
+工作目录：`D:/obsidian_md/hoshino/worktrees/archive/v01-player`
 
 ```text
 你是本项目的 Agent 2，当前只执行 PRD 的 A2，不要同时开始 A3。
@@ -200,7 +200,7 @@ git worktree add ../starwater-effects -b agent/effects
 - docs/PRD.md
 - docs/FOUR_AGENT_WORKFLOW.md
 
-工作目录：D:/obsidian_md/starwater-player
+工作目录：D:/obsidian_md/hoshino/worktrees/archive/v01-player
 当前分支：agent/player
 允许修改：src/player/** 和本模块对应测试。
 禁止修改：package.json、lockfile、main.ts、core/**、config/world.ts、world/**、rendering/**。
@@ -226,7 +226,7 @@ A3 地形尚未完成时使用 A0 提供的平坦地形接口，不得复制另�
 
 ### 6.3 Agent 3：故事、星屑、伙伴与 UI
 
-工作目录：`D:/obsidian_md/starwater-narrative`
+工作目录：`D:/obsidian_md/hoshino/worktrees/archive/v01-narrative`
 
 ```text
 你是本项目的 Agent 3，只执行 PRD 的 A4。
@@ -235,7 +235,7 @@ A3 地形尚未完成时使用 A0 提供的平坦地形接口，不得复制另�
 - docs/PRD.md
 - docs/FOUR_AGENT_WORKFLOW.md
 
-工作目录：D:/obsidian_md/starwater-narrative
+工作目录：D:/obsidian_md/hoshino/worktrees/archive/v01-narrative
 当前分支：agent/narrative
 允许修改：src/narrative/**、src/companion/**、src/ui/** 和对应测试。
 禁止修改：package.json、lockfile、main.ts、core/**、config/world.ts、player/**、world/**、rendering/**。
@@ -259,7 +259,7 @@ A3 地形尚未完成时使用 A0 提供的平坦地形接口，不得复制另�
 
 ### 6.4 Agent 4：VFX 与 QA 基础设施
 
-工作目录：`D:/obsidian_md/starwater-effects`
+工作目录：`D:/obsidian_md/hoshino/worktrees/archive/v01-effects`
 
 ```text
 你是本项目的 Agent 4，当前执行 PRD 的 A5，并为 A6 准备独立测试，不要替其他模块实现业务功能。
@@ -268,7 +268,7 @@ A3 地形尚未完成时使用 A0 提供的平坦地形接口，不得复制另�
 - docs/PRD.md
 - docs/FOUR_AGENT_WORKFLOW.md
 
-工作目录：D:/obsidian_md/starwater-effects
+工作目录：D:/obsidian_md/hoshino/worktrees/archive/v01-effects
 当前分支：agent/effects
 允许修改：src/effects/**、src/tests/**、独立测试目录及自身新增音频资产。
 禁止修改：package.json、lockfile、main.ts、core/**、config/world.ts 和其他业务目录。
@@ -309,7 +309,7 @@ A3 地形尚未完成时使用 A0 提供的平坦地形接口，不得复制另�
 优先集成 A1 和 A2。其他 PR 可以保持打开，不必等待。
 
 ```bash
-cd "D:/obsidian_md/starwater-demo"
+cd "D:/obsidian_md/hoshino/starwater-demo"
 git switch main
 git fetch origin
 git pull origin main
@@ -338,7 +338,7 @@ A1 + A2 合并后，必须用测试地形验证：
 A2 已合并、M1 通过后，在 Agent 2 的 worktree 中基于最新 main 开新分支：
 
 ```bash
-cd "D:/obsidian_md/starwater-player"
+cd "D:/obsidian_md/hoshino/worktrees/archive/v01-player"
 git fetch origin
 git switch -c agent/world origin/main
 ```

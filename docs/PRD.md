@@ -5,7 +5,7 @@
 > 版本：0.1
 > 日期：2026-11-17
 > 状态：V0.1 需求与验收基线；当前运行版本为 `v0.1.0-rc.1`
-> 项目根目录：`D:/obsidian_md/starwater-demo`
+> 项目根目录：`D:/obsidian_md/hoshino/starwater-demo`
 > 远程仓库：`https://github.com/TheNorth7747/Hoshino-Realm-of-Watercolor`
 > 本文档记录产品目标与验收标准。当前已实现功能以根目录 README 和最终验收报告为准；V0.2 手册属于后续规划，不代表已经交付。
 > 实现过程中如需变更，先记录变更，再修改代码。
@@ -531,7 +531,7 @@ export interface StoryNode {
 每个 Agent 接到任务时，将下方模板与对应任务卡一起发送：
 
 ```text
-先阅读 D:/obsidian_md/starwater-demo/docs/PRD.md，并严格遵守其中的范围、坐标和共享契约。
+先阅读 D:/obsidian_md/hoshino/starwater-demo/docs/PRD.md，并严格遵守其中的范围、坐标和共享契约。
 你负责下述任务卡，只修改“允许修改”的路径，不擅自重构其他模块。
 如果共享接口不足，提交明确的变更建议，由集成者修改 core/contracts.ts。
 交付必须包含：实现、对应测试/自测、修改文件清单、运行命令、已知问题。

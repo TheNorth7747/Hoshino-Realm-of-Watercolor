@@ -173,7 +173,7 @@ FPS 全程稳定在 164.7～165.2，无下降趋势。`ac10.verdict = "PASS"`。
 
 ```bash
 export PATH="/c/Users/Administrator/AppData/Local/Programs/node-v24.22.2-win-x64:$PATH"
-cd D:/obsidian_md/starwater-demo
+cd D:/obsidian_md/hoshino/starwater-demo
 
 npm ci
 npm run typecheck && npm run lint && npm run format:check
