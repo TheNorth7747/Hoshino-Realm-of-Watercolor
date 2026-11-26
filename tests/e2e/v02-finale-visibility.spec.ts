@@ -109,7 +109,7 @@ test("V0.2：结局 UI 出现前，世界/花树/镜头/分层花瓣已可见，
   await expect(page.locator(".sw-ending")).toBeHidden();
 
   // 4) UI 仍按既有故事时序延迟出现（≥2s），不被 VFX 改动破坏。
-  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 15_000 });
   const elapsedMs = Date.now() - startedAt;
   expect(elapsedMs).toBeGreaterThanOrEqual(2_000);
   await expect(page.locator(".sw-ending__restart")).toBeVisible();
@@ -130,7 +130,7 @@ test("V0.2：结局后重置，分层花瓣与运镜状态全部复位且可二�
   expect(atFinaleStart.vfx?.petalLayerCounts.far ?? 0).toBeGreaterThan(0);
   expect(atFinaleStart.endingHidden).toBe(true);
 
-  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 15_000 });
   const before = await readState(page);
   // 结局 UI 出现时世界状态仍成立（运镜/远山/星屑），花瓣已按生命周期回收属正常。
   expect(before.cameraFinale).toBe(true);

@@ -63,13 +63,13 @@
 
 ---
 
-## 5. 未闭合项（**不得打 release，不得宣称 M4 完全通过**）
+## 5. 闭合状态（已在 A6 真机复测闭合，见 `src/tests/A6_ACCEPTANCE_REPORT.md`）
 
 | 项 | 状态 | 判定条件 |
 |---|---|---|
-| AC-10 FPS（中位 ≥55 / 低帧 ≥30） | 🔴 未闭合 | 必须在真 GPU 的 Chrome 上按 1920×1080、DPR≤1.5 实跑并记录设备 |
-| P0 表现项（镜头拉远 / 远景染色） | 🟢 已实现，待 A6 在最新 main 复验 | `tests/e2e/rc-finale-acceptance.spec.ts` RC-01～04 |
-| AC-09 10 分钟稳定性 | 🟢 已跑过（268 采样 / 0 错误），待 A6 复跑 | `A6_SAMPLE_SEC=600` |
+| AC-10 FPS（中位 ≥55 / 低帧 ≥30） | 🟢 已闭合（RTX 3060 Chrome 157 实测 165 / 164.7 FPS） | 真 GPU Chrome 上按 1920×1080、DPR≤1.5 实跑并记录设备 |
+| P0 表现项（镜头拉远 / 远景染色） | 🟢 已复验通过 | `tests/e2e/rc-finale-acceptance.spec.ts` RC-01～04 |
+| AC-09 10 分钟稳定性 | 🟢 已复验通过（268～269 采样 / 0 错误） | `A6_SAMPLE_SEC=600` |
 
 ---
 

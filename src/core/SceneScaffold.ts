@@ -89,6 +89,8 @@ export function createSceneScaffold(options: SceneScaffoldOptions): SceneScaffol
     const grid = new GridHelper(gridSize, Math.round(gridSize / 4), 0x8d949c, 0xd6d0c4);
     grid.name = "debug-grid";
     grid.position.y = spawn.y + 0.01;
+    // 默认隐藏平面网格，避免固定 Y=spawn.y 的网格线穿过起伏地形造成水平白条带假象
+    grid.visible = false;
     const axes = new AxesHelper(6);
     axes.name = "debug-axes";
     axes.position.set(spawn.x, spawn.y + 0.02, spawn.z);

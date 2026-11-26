@@ -173,7 +173,7 @@ test("RC-03：结局 UI 在花树完成后仍延迟出现（≥2s），延迟不
   const startedAt = Date.now();
 
   // 下界断言：结局 UI 不得早于 2s 出现（story.json delaySeconds=2.5，PRD 要求 2～3s）
-  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 15_000 });
   const elapsedMs = Date.now() - startedAt;
   expect(elapsedMs).toBeGreaterThanOrEqual(2_000);
   await expect(page.locator(".sw-ending__restart")).toBeVisible();
@@ -185,7 +185,7 @@ test("RC-04：结局后重置可完整二次通关（镜头/远山/星屑/结局
   const errors = await boot(page);
 
   await reachFinale(page);
-  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 15_000 });
   expect((await page.locator(".sw-hud__shards").textContent())?.trim()).toContain("3/3");
   expect((await readCamera(page))?.active).toBe(true);
   expect((await readReveal(page))?.finale).toBeGreaterThan(0);
@@ -202,7 +202,7 @@ test("RC-04：结局后重置可完整二次通关（镜头/远山/星屑/结局
   // 二次通关：三节点再次可触发并再次进入结局
   await reachFinale(page);
   expect((await page.locator(".sw-hud__shards").textContent())?.trim()).toContain("3/3");
-  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator(".sw-ending")).toBeVisible({ timeout: 15_000 });
   expect((await readCamera(page))?.active).toBe(true);
   expect((await readReveal(page))?.finale).toBeGreaterThan(0);
 

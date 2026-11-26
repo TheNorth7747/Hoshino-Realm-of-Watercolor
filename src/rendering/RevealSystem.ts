@@ -149,7 +149,6 @@ export class RevealSystem implements GameSystem {
         context.canvas.clientWidth || window.innerWidth,
         context.canvas.clientHeight || window.innerHeight,
       );
-      this.pass.install();
     }
 
     this.unsubscribers.push(
@@ -220,6 +219,12 @@ export class RevealSystem implements GameSystem {
     } else {
       mask.advance(deltaSeconds);
     }
+  }
+
+  renderFrame(context: GameContext): boolean {
+    if (!this.pass) return false;
+    this.pass.renderWithComposer(context.scene, context.camera);
+    return true;
   }
 
   resize(width: number, height: number): void {

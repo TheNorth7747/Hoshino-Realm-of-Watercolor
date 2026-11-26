@@ -203,8 +203,18 @@ export class WatercolorPass {
     this.composer.render(deltaSeconds);
   }
 
+  /** 通过 GameSystem.renderFrame() 正式钩子执行后期渲染，无需包装 renderer.render。 */
+  renderWithComposer(scene: Scene, camera: Camera): void {
+    this.renderer.info.autoReset = false;
+    this.renderer.info.reset();
+    this.renderPass.scene = scene;
+    this.renderPass.camera = camera;
+    this.composer.render(0);
+  }
+
   dispose(): void {
     this.uninstall();
+    this.renderer.info.autoReset = true;
     this.paperPass.dispose();
     this.renderPass.dispose();
     this.composer.dispose();
