@@ -1,13 +1,8 @@
 /**
- * 染色系统挂载点（A1）。
+ * 染色系统挂载点（A1 / V0.3 视觉集成）。
  *
  * GameSystem 契约来自 A0：`phase = "reveal"`，因此它一定在 story/trigger 之后、
  * effects 之前执行（PRD 7.3）。
- *
- * 集成方式（main.ts 由集成者改，A1 不动共享文件）：
- *   new RevealSystem({ playerSource: playerController })   // A2 的控制器实现 PlayerSource
- * 场景材质由 A3 通过 `createWatercolorMaterial({ uniforms: reveal.revealUniforms, ... })` 取用，
- * 保证地面/草/水/花树共用同一份 uniforms（AC-05）。
  */
 import type {
   DebugValue,
@@ -23,6 +18,8 @@ import { ColorRevealMask } from "./ColorRevealMask";
 import type { MaskSurface } from "./MaskSurface";
 import { Atmosphere } from "./Atmosphere";
 import { FinaleReveal } from "./FinaleReveal";
+import { GodRays } from "./GodRays";
+import { createProceduralBrushPack, type ProceduralBrushPack } from "./ProceduralBrushes";
 import { RevealBench } from "./RevealBench";
 import { RevealDebugView } from "./RevealDebugView";
 import { WatercolorPass } from "./WatercolorPass";
@@ -37,21 +34,23 @@ export interface RevealSystemOptions {
   readonly enablePaperPass?: boolean;
   readonly paperPassStrength?: number;
   readonly brushRadius?: number;
-  /** V0.2 开场预染色半径（米）。默认 10（手册要求 8～12）。 */
+  /** V0.2/V0.3 开场预染色半径（米）。默认 8。 */
   readonly spawnRevealRadius?: number;
-  /** V0.2 笔刷沿角色朝向的前移距离（米）。默认 1.6；0 = 正脚下。 */
+  /** V0.2/V0.3 笔刷沿角色朝向的前移距离（米）。默认 1.6；0 = 正脚下。 */
   readonly brushForwardOffset?: number;
   /** 是否挂载结局天空球。默认 true。 */
   readonly enableSkyDome?: boolean;
+  /** 是否挂载结局林间体积光束。默认 true。 */
+  readonly enableGodRays?: boolean;
   /** 测试注入：替换遮罩底层的像素表面（默认用 canvas）。 */
   readonly maskSurface?: MaskSurface;
 }
 
-/** V0.2 默认笔刷半径（米）：手册要求 2.5～3.2。 */
+/** V0.2/V0.3 默认笔刷半径（米）。 */
 export const V02_BRUSH_RADIUS = 2.8;
-/** V0.2 默认开场预染色半径（米）：手册要求 8～12；取 8 以避开 A1 的镜像探针（距出生点 10m）。 */
+/** V0.2/V0.3 默认开场预染色半径（米）。 */
 export const V02_SPAWN_REVEAL_RADIUS = 8;
-/** V0.2 默认笔刷前移距离（米）。 */
+/** V0.2/V0.3 默认笔刷前移距离（米）。 */
 export const V02_BRUSH_FORWARD_OFFSET = 1.6;
 
 export class RevealSystem implements GameSystem {
@@ -62,10 +61,15 @@ export class RevealSystem implements GameSystem {
   private readonly unsubscribers: Unsubscribe[] = [];
   /** 最终章远景显色（只影响世界边界之外的远山）。 */
   private readonly finale = new FinaleReveal();
-  /** V0.2：结局天空与雾的氛围控制。 */
+  /** V0.2/V0.3：结局天空与雾的氛围控制。 */
   private atmosphere: Atmosphere | null = null;
+  /** V0.3：结局林间体积光束。 */
+  private godRays: GodRays | null = null;
+  /** V0.3：程序化水彩与线稿贴图包。 */
+  private brushes: ProceduralBrushPack | null = null;
   /** 笔刷落点（角色位置 + 朝向前移），复用避免每帧分配。 */
   private readonly brushPosition = new Vector3();
+  private elapsedTime = 0;
   private mask: ColorRevealMask | null = null;
   private uniforms: RevealUniforms | null = null;
   private bench: RevealBench | null = null;
@@ -76,22 +80,26 @@ export class RevealSystem implements GameSystem {
     this.options = options;
   }
 
-  /** V0.2：开场预染色半径（米）。 */
   get spawnRevealRadius(): number {
     return this.options.spawnRevealRadius ?? V02_SPAWN_REVEAL_RADIUS;
   }
 
-  /** V0.2：笔刷前移距离（米）。 */
   get brushForwardOffset(): number {
     return Math.max(0, this.options.brushForwardOffset ?? V02_BRUSH_FORWARD_OFFSET);
   }
 
-  /** V0.2：结局氛围状态（测试与调试用）。 */
   get atmosphereState(): Atmosphere | null {
     return this.atmosphere;
   }
 
-  /** 供 A3 取材质 uniforms、供调试与测试读取。 */
+  get brushPack(): ProceduralBrushPack | null {
+    return this.brushes;
+  }
+
+  get godRaysState(): GodRays | null {
+    return this.godRays;
+  }
+
   get colorRevealMask(): ColorRevealMask | null {
     return this.mask;
   }
@@ -104,12 +112,12 @@ export class RevealSystem implements GameSystem {
     return this.pass;
   }
 
-  /** 最终章远景显色状态（调试与测试用）。 */
   get finaleReveal(): FinaleReveal {
     return this.finale;
   }
 
   init(context: GameContext): void {
+    this.elapsedTime = 0;
     const mask = new ColorRevealMask({
       bounds: context.world.bounds,
       resolution: context.settings.maskResolution,
@@ -119,16 +127,20 @@ export class RevealSystem implements GameSystem {
       ...(this.options.maskSurface === undefined ? {} : { surface: this.options.maskSurface }),
     });
     this.mask = mask;
+    this.brushes = createProceduralBrushPack();
     this.uniforms = createRevealUniforms(mask.texture, context.world.bounds);
 
-    // V0.2：开场预染色（8～12m），让下半屏是连续色域而不是脚下圆斑。
-    // 与 reset 共用同一入口，保证「重新进入绘本」得到同一个开场画面。
     this.imprintOpening();
 
     this.atmosphere = new Atmosphere(
       this.options.enableSkyDome === undefined ? {} : { enableSkyDome: this.options.enableSkyDome },
     );
     this.atmosphere.init(context.scene);
+
+    if (this.options.enableGodRays !== false) {
+      this.godRays = new GodRays();
+      this.godRays.init(context.scene);
+    }
 
     const enableBench = this.options.enableBench ?? context.settings.debugEnabled;
     if (enableBench) {
@@ -137,14 +149,12 @@ export class RevealSystem implements GameSystem {
 
     const enablePaperPass = this.options.enablePaperPass ?? true;
     if (enablePaperPass) {
-      this.pass = new WatercolorPass(
-        context.renderer,
-        context.scene,
-        context.camera,
-        this.options.paperPassStrength === undefined
+      this.pass = new WatercolorPass(context.renderer, context.scene, context.camera, {
+        paperTexture: this.brushes.paperGrain,
+        ...(this.options.paperPassStrength === undefined
           ? {}
-          : { strength: this.options.paperPassStrength },
-      );
+          : { strength: this.options.paperPassStrength }),
+      });
       this.pass.setSize(
         context.canvas.clientWidth || window.innerWidth,
         context.canvas.clientHeight || window.innerHeight,
@@ -156,7 +166,6 @@ export class RevealSystem implements GameSystem {
         this.mask?.bloom(payload.position, payload.radius, payload.duration);
       }),
     );
-    // 最终章远景显色：与花树 bloom 同一事件源，不新建故事状态（PRD 5.4）
     this.unsubscribers.push(
       context.events.on("story:completed", (payload) => {
         if (payload.nodeId === "tree") this.finale.trigger();
@@ -165,12 +174,15 @@ export class RevealSystem implements GameSystem {
     this.unsubscribers.push(
       context.events.on("game:reset", () => {
         this.mask?.reset();
-        // 重置 = 重新进入绘本：回到开场画面（含开场预染色），而不是一张白纸
         this.imprintOpening();
         this.bench?.reset();
         this.finale.reset();
         this.atmosphere?.setFinale(0);
-        if (this.uniforms) this.uniforms.uFinaleReveal.value = 0;
+        this.godRays?.setFinale(0);
+        if (this.uniforms) {
+          this.uniforms.uFinaleReveal.value = 0;
+          this.uniforms.uGlobalReveal.value = 0;
+        }
       }),
     );
     this.unsubscribers.push(
@@ -194,19 +206,28 @@ export class RevealSystem implements GameSystem {
     const mask = this.mask;
     if (!mask) return;
 
-    // 排线按相机距离加粗需要相机世界坐标
-    this.uniforms?.uCameraPosition.value.copy(context.camera.position);
+    const dt = Number.isFinite(deltaSeconds) && deltaSeconds > 0 ? deltaSeconds : 0;
+    this.elapsedTime += dt;
 
-    // 远景显色推进（只影响世界边界之外的远山；界内遮罩不受影响）
-    const finaleValue = this.finale.update(deltaSeconds);
-    if (this.uniforms) this.uniforms.uFinaleReveal.value = finaleValue;
+    if (this.uniforms) {
+      this.uniforms.uCameraPosition.value.copy(context.camera.position);
+      this.uniforms.uTime.value = this.elapsedTime;
+    }
+
+    const finaleValue = this.finale.update(dt);
+    if (this.uniforms) {
+      this.uniforms.uFinaleReveal.value = finaleValue;
+      this.uniforms.uGlobalReveal.value = finaleValue;
+    }
     this.atmosphere?.setFinale(finaleValue);
+    this.atmosphere?.setTime(this.elapsedTime);
+    this.godRays?.setFinale(finaleValue);
+    this.godRays?.update(dt);
 
-    this.bench?.update(deltaSeconds);
+    this.bench?.update(dt);
 
     const source = this.options.playerSource ?? this.bench?.playerSource;
     if (source) {
-      // V0.2：笔刷略向角色前方偏移，让「前方先亮」而不是正脚下一点
       const snapshot = source.getPlayerSnapshot();
       const heading = snapshot.headingRadians;
       const offset = this.brushForwardOffset;
@@ -215,9 +236,9 @@ export class RevealSystem implements GameSystem {
         snapshot.position.y,
         snapshot.position.z + Math.cos(heading) * offset,
       );
-      mask.update(deltaSeconds, this.brushPosition);
+      mask.update(dt, this.brushPosition);
     } else {
-      mask.advance(deltaSeconds);
+      mask.advance(dt);
     }
   }
 
@@ -248,15 +269,16 @@ export class RevealSystem implements GameSystem {
     this.mask = null;
     this.uniforms = null;
 
+    this.godRays?.dispose();
+    this.godRays = null;
+
     this.atmosphere?.dispose();
     this.atmosphere = null;
+
+    this.brushes?.dispose();
+    this.brushes = null;
   }
 
-  /**
-   * V0.2：开场预染色。出生点落一笔大半径印记（8～12m），
-   * 让开场下半屏是连续色域，而不是脚下一个小绿斑。
-   * 与 reset 共用：重置后重放同一个开场画面。
-   */
   private imprintOpening(): void {
     const mask = this.mask;
     if (!mask) return;
@@ -279,6 +301,7 @@ export class RevealSystem implements GameSystem {
       opening: `${this.spawnRevealRadius.toFixed(1)}m`,
       brushAhead: `${this.brushForwardOffset.toFixed(1)}m`,
       atmosphere: Number((this.atmosphere?.value ?? 0).toFixed(2)),
+      godRays: Number((this.godRays?.value ?? 0).toFixed(2)),
     };
   }
 }
