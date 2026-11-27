@@ -33,33 +33,33 @@ const RIDGE_SPECS: readonly RidgeSpec[] = [
   {
     name: "mountain-ridge-near",
     kind: "mountain",
-    baseRadius: 72,
-    radialWave: 5.5,
-    minHeight: 8,
-    maxHeight: 19,
-    baseOffsetY: -2.5,
+    baseRadius: 74,
+    radialWave: 4.5,
+    minHeight: 11,
+    maxHeight: 22,
+    baseOffsetY: -6.5,
     phase: 0.4,
     segments: 120,
   },
   {
     name: "mountain-ridge-mid",
     kind: "mountainMid",
-    baseRadius: 90,
-    radialWave: 6.5,
-    minHeight: 14,
-    maxHeight: 28,
-    baseOffsetY: -2.0,
+    baseRadius: 94,
+    radialWave: 6.0,
+    minHeight: 16,
+    maxHeight: 30,
+    baseOffsetY: -6.0,
     phase: 1.9,
     segments: 120,
   },
   {
     name: "mountain-ridge-far",
     kind: "mountainFar",
-    baseRadius: 112,
-    radialWave: 7.5,
-    minHeight: 19,
-    maxHeight: 38,
-    baseOffsetY: -1.5,
+    baseRadius: 114,
+    radialWave: 7.0,
+    minHeight: 22,
+    maxHeight: 40,
+    baseOffsetY: -5.5,
     phase: 3.4,
     segments: 120,
   },
@@ -83,23 +83,16 @@ function buildRidgeMesh(
   const uvs: number[] = [];
   const indices: number[] = [];
 
-  const minBoundX = WORLD_BOUNDS.maxX + 12;
-  const minBoundZ = WORLD_BOUNDS.maxZ + 12;
+  const smoothMinOuter = Math.max(WORLD_BOUNDS.maxX, WORLD_BOUNDS.maxZ) + 21;
 
   for (let i = 0; i <= spec.segments; i += 1) {
     const u = i / spec.segments;
     const angle = u * Math.PI * 2;
     const radialJitter = Math.sin(angle * 4 + spec.phase) * spec.radialWave;
-    let r = spec.baseRadius + radialJitter;
+    const r = Math.max(smoothMinOuter, spec.baseRadius + radialJitter);
 
     const dirX = Math.cos(angle);
     const dirZ = Math.sin(angle);
-    // 保证任意点都在可玩区及边缘缓冲区之外（仅走 finale 显色）
-    if (Math.abs(dirX * r) < minBoundX && Math.abs(dirZ * r) < minBoundZ) {
-      const scaleX = Math.abs(dirX) > 1e-4 ? minBoundX / Math.abs(dirX) : r;
-      const scaleZ = Math.abs(dirZ) > 1e-4 ? minBoundZ / Math.abs(dirZ) : r;
-      r = Math.max(r, Math.min(scaleX, scaleZ));
-    }
 
     const x = dirX * r;
     const z = dirZ * r;

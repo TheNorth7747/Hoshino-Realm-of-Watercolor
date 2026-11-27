@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   // V0.2 密林场景（~158k 三角面）在 SwiftShader 软渲染下约 7～12 FPS，放宽单测超时以免误杀
-  timeout: 120_000,
+  timeout: 180_000,
   expect: { timeout: 10_000 },
   reporter: [["list"]],
   use: {
@@ -32,6 +32,6 @@ export default defineConfig({
     command: `npm run dev -- --port ${PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: !process.env["CI"],
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

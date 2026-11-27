@@ -15,7 +15,7 @@ import {
   type Scene,
 } from "three";
 
-const RAY_COUNT = 16;
+const RAY_COUNT = 10;
 
 const GOD_RAY_VERTEX = /* glsl */ `
 varying vec2 vRayUv;
@@ -38,8 +38,7 @@ void main() {
   if (uIntensity <= 0.005) discard;
 
   // 横向柔边钟形衰减：边缘完全消融，无矩形硬边
-  float across = sin(vRayUv.x * 3.14159265);
-  across = across * across;
+  float across = pow(max(0.0, sin(vRayUv.x * 3.14159265)), 1.65);
 
   // 纵向：顶部光晕偏强，落向地面逐渐消散
   float along = smoothstep(0.0, 0.28, vRayUv.y) * smoothstep(1.0, 0.3, vRayUv.y);
@@ -48,10 +47,10 @@ void main() {
   float filament = 0.65 + 0.35 * sin(vRayUv.x * 16.0 + uTime * 0.35);
   float filament2 = 0.72 + 0.28 * cos(vRayUv.x * 9.0 - uTime * 0.22);
 
-  float alpha = across * along * filament * filament2 * uIntensity * 0.14;
+  float alpha = across * along * filament * filament2 * uIntensity * 0.58;
   if (alpha <= 0.002) discard;
 
-  vec3 warmBeam = vec3(1.0, 0.955, 0.84);
+  vec3 warmBeam = vec3(1.0, 0.92, 0.66);
   gl_FragColor = vec4(warmBeam * alpha, alpha);
 }
 `;
@@ -66,22 +65,16 @@ interface RayPlacement {
 }
 
 const DEFAULT_RAY_PLACEMENTS: readonly RayPlacement[] = [
-  { x: -7.5, y: 8.5, z: 24, width: 4.4, height: 22, yaw: 0.25 },
-  { x: 6.5, y: 9.0, z: 20, width: 4.8, height: 23, yaw: -0.22 },
-  { x: -5.0, y: 8.5, z: 14, width: 3.8, height: 21, yaw: 0.42 },
-  { x: 4.5, y: 9.0, z: 10, width: 5.0, height: 22, yaw: -0.18 },
-  { x: -10.5, y: 8.8, z: 6, width: 4.5, height: 22, yaw: 0.12 },
-  { x: 9.0, y: 9.2, z: 3, width: 5.2, height: 24, yaw: -0.35 },
-  { x: -3.5, y: 8.6, z: -2, width: 4.2, height: 21, yaw: 0.28 },
-  { x: 6.0, y: 9.0, z: -6, width: 4.6, height: 22, yaw: -0.24 },
-  { x: -8.0, y: 9.0, z: -12, width: 5.0, height: 23, yaw: 0.32 },
-  { x: 4.0, y: 9.4, z: -15, width: 4.4, height: 22, yaw: -0.14 },
-  { x: -2.0, y: 9.2, z: 28, width: 4.6, height: 21, yaw: 0.16 },
-  { x: 11.5, y: 9.0, z: 16, width: 5.2, height: 23, yaw: -0.3 },
-  { x: -12.0, y: 9.2, z: 18, width: 4.6, height: 22, yaw: 0.36 },
-  { x: 2.5, y: 8.8, z: 22, width: 3.6, height: 20, yaw: -0.1 },
-  { x: -6.0, y: 9.5, z: -20, width: 4.8, height: 24, yaw: 0.22 },
-  { x: 7.5, y: 9.5, z: -22, width: 5.0, height: 24, yaw: -0.28 },
+  { x: -7.5, y: 8.5, z: 24, width: 5.0, height: 22, yaw: 0.25 },
+  { x: 6.5, y: 9.0, z: 20, width: 5.4, height: 23, yaw: -0.22 },
+  { x: -5.0, y: 8.5, z: 14, width: 4.8, height: 21, yaw: 0.42 },
+  { x: 4.5, y: 9.0, z: 9, width: 5.4, height: 22, yaw: -0.18 },
+  { x: -10.5, y: 8.8, z: 4, width: 5.0, height: 22, yaw: 0.12 },
+  { x: 9.0, y: 9.2, z: -2, width: 5.6, height: 24, yaw: -0.35 },
+  { x: -3.5, y: 8.6, z: -7, width: 4.8, height: 21, yaw: 0.28 },
+  { x: 5.5, y: 9.2, z: -13, width: 5.2, height: 23, yaw: -0.2 },
+  { x: -7.0, y: 9.4, z: -18, width: 5.2, height: 23, yaw: 0.26 },
+  { x: 2.0, y: 9.0, z: 26, width: 5.0, height: 21, yaw: -0.12 },
 ];
 
 export class GodRays {

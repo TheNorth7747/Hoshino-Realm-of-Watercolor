@@ -64,11 +64,11 @@ test("M2：主路线走通，不卡在溪流，无软锁", async ({ page }, test
   const samples: Sample[] = [start as Sample];
   const ys = new Set<number>();
 
-  // 沿主路线（-Z）冲刺；每 700ms 采样一次，最多 24s
+  // 沿主路线（-Z）冲刺；每 700ms 采样一次，最多 60 轮以适配 SwiftShader 软渲染
   await page.keyboard.down("ShiftLeft");
   await page.keyboard.down("KeyW");
   let reachedTree = false;
-  for (let i = 0; i < 34; i += 1) {
+  for (let i = 0; i < 60; i += 1) {
     await page.waitForTimeout(700);
     const sample = await readPlayer(page);
     if (!sample) break;

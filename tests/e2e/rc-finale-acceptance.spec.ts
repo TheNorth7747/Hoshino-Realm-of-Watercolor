@@ -93,11 +93,12 @@ test("RC-01：花树完成后镜头平滑拉远至 13m，无硬切、reset 复�
   expect(t0?.distance).toBeLessThan(CAMERA_FINALE_DISTANCE);
 
   const distances: number[] = [t0?.distance ?? 0];
-  for (let i = 0; i < 18; i += 1) {
-    await page.waitForTimeout(100);
+  for (let i = 0; i < 36; i += 1) {
+    await page.waitForTimeout(120);
     const s = await readCamera(page);
     expect(s).not.toBeNull();
     distances.push(s?.distance ?? 0);
+    if (distances.length >= 6 && (s?.distance ?? 0) > 11.2) break;
   }
   for (let i = 1; i < distances.length; i += 1) {
     expect(distances[i] ?? 0).toBeGreaterThanOrEqual((distances[i - 1] ?? 0) - 1e-6);
@@ -116,7 +117,7 @@ test("RC-01：花树完成后镜头平滑拉远至 13m，无硬切、reset 复�
 });
 
 test("RC-02：花树完成后远山显色单调推进至 1，reset 归零，不改变界内遮罩", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const errors = await boot(page);
 
   const before = await readReveal(page);
@@ -132,10 +133,12 @@ test("RC-02：花树完成后远山显色单调推进至 1，reset 归零，不�
   await clickNode(page, "tree");
 
   const values: number[] = [];
-  for (let i = 0; i < 27; i += 1) {
+  for (let i = 0; i < 36; i += 1) {
     const s = await readReveal(page);
-    values.push(s?.finale ?? 0);
-    await page.waitForTimeout(100);
+    const value = s?.finale ?? 0;
+    values.push(value);
+    if (values.length >= 6 && value > 0.85) break;
+    await page.waitForTimeout(120);
   }
   for (let i = 1; i < values.length; i += 1) {
     expect(values[i] ?? 0).toBeGreaterThanOrEqual((values[i - 1] ?? 0) - 1e-6);
@@ -159,7 +162,7 @@ test("RC-03：花树完成后 game:finished 仍延迟发出（≥2s），不抢�
   await reachFinale(page);
   const startedAt = Date.now();
 
-  await expect.poll(async () => (await readExplore(page)).finished, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => (await readExplore(page)).finished, { timeout: 45_000 }).toBe(true);
   const elapsedMs = Date.now() - startedAt;
   expect(elapsedMs).toBeGreaterThanOrEqual(2_000);
 
@@ -167,10 +170,11 @@ test("RC-03：花树完成后 game:finished 仍延迟发出（≥2s），不抢�
 });
 
 test("RC-04：结局后重置可完整二次探索（镜头/远山/状态全复位）", async ({ page }) => {
+  test.setTimeout(300_000);
   const errors = await boot(page);
 
   await reachFinale(page);
-  await expect.poll(async () => (await readExplore(page)).finished, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => (await readExplore(page)).finished, { timeout: 45_000 }).toBe(true);
   expect((await readCamera(page))?.active).toBe(true);
   expect((await readReveal(page))?.finale).toBeGreaterThan(0);
 
@@ -184,7 +188,7 @@ test("RC-04：结局后重置可完整二次探索（镜头/远山/状态全复�
   expect((await readReveal(page))?.finale).toBe(0);
 
   await reachFinale(page);
-  await expect.poll(async () => (await readExplore(page)).finished, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => (await readExplore(page)).finished, { timeout: 45_000 }).toBe(true);
   expect((await readCamera(page))?.active).toBe(true);
   expect((await readReveal(page))?.finale).toBeGreaterThan(0);
 

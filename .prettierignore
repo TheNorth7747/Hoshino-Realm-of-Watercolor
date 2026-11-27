@@ -7,3 +7,4 @@ package-lock.json
 docs/
 # 机器生成的验收证据 JSON，保持原始采集格式，不由 prettier 改写
 src/tests/v02-evidence/
+src/tests/v03-evidence/

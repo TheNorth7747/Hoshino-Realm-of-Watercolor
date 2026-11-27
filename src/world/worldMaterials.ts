@@ -126,13 +126,13 @@ export const WORLD_MATERIAL_APPEARANCE: Readonly<
   },
   treeCanopy: {
     color: 0xffffff,
-    roughness: 0.88,
+    roughness: 0.86,
     side: DoubleSide,
     mode: "foliage",
     brushKey: "foliage",
     windStrength: 0.05,
-    topColor: 0xf6c2d3,
-    bottomColor: 0xa14162,
+    topColor: 0xfff0f5,
+    bottomColor: 0xd98aa8,
     alphaCutoff: 0.22,
   },
   treeCanopyGreen: {

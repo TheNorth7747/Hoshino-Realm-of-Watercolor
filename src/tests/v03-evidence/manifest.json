@@ -1,0 +1,180 @@
+{
+  "note": "V0.3 real-game screenshots from the running page; no reference frames or static composites.",
+  "spec": "1280x720, debug UI hidden, real Chrome GPU (not SwiftShader)",
+  "device": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002520) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36",
+    "dpr": 1,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "realMovementPositions": {
+    "spawn": {
+      "x": 0,
+      "z": 32
+    },
+    "flower": {
+      "x": -3.374853044869016,
+      "z": 20.969609956938672
+    },
+    "stream": {
+      "x": -0.05438855238322625,
+      "z": 7.808134402133878
+    },
+    "poppy": {
+      "x": -2.49848339190236,
+      "z": -10.584413900725455
+    },
+    "tree": {
+      "x": 0.02666824087169258,
+      "z": -17.522046537147432
+    }
+  },
+  "shots": [
+    {
+      "id": "opening",
+      "file": "01-opening.png",
+      "bytes": 954153,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "intro",
+        "visited": [],
+        "finished": false,
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "controlsHintVisible": true
+      }
+    },
+    {
+      "id": "meadow-log",
+      "file": "02-meadow-log.png",
+      "bytes": 999434,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "flower",
+        "visited": [
+          "flower"
+        ],
+        "finished": false,
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "controlsHintVisible": true
+      }
+    },
+    {
+      "id": "stream-willow",
+      "file": "03-stream-willow.png",
+      "bytes": 808724,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "stream",
+        "visited": [
+          "flower",
+          "stream"
+        ],
+        "finished": false,
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "controlsHintVisible": true
+      }
+    },
+    {
+      "id": "poppy-hill",
+      "file": "04-poppy-hill.png",
+      "bytes": 999041,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "stream",
+        "visited": [
+          "flower",
+          "stream"
+        ],
+        "finished": false,
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": false,
+        "finaleReveal": 0,
+        "controlsHintVisible": true
+      }
+    },
+    {
+      "id": "sakura-bloom",
+      "file": "05-sakura-bloom.png",
+      "bytes": 819087,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "finished",
+        "visited": [
+          "flower",
+          "stream",
+          "tree"
+        ],
+        "finished": false,
+        "petalsActive": 60,
+        "petalLayers": {
+          "near": 12,
+          "mid": 26,
+          "far": 22
+        },
+        "cameraFinale": true,
+        "finaleReveal": 0.7534173837924456,
+        "controlsHintVisible": true
+      }
+    },
+    {
+      "id": "lookback-godrays",
+      "file": "06-lookback-godrays.png",
+      "bytes": 717899,
+      "width": 1280,
+      "height": 720,
+      "state": {
+        "step": "finished",
+        "visited": [
+          "flower",
+          "stream",
+          "tree"
+        ],
+        "finished": true,
+        "petalsActive": 0,
+        "petalLayers": {
+          "near": 0,
+          "mid": 0,
+          "far": 0
+        },
+        "cameraFinale": true,
+        "finaleReveal": 1,
+        "controlsHintVisible": true
+      }
+    }
+  ],
+  "runtimeErrors": []
+}

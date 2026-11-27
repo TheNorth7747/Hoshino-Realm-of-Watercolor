@@ -152,9 +152,9 @@ export function buildLandmarkGroup(materials: MaterialAccessor): LandmarkBuildRe
     readonly tint: Color;
   }
   const cards: BlossomCard[] = [];
-  const deepRose = new Color(0x9a3d5d);
-  const midSakura = new Color(0xd96e92);
-  const lightBlush = new Color(0xf5c2d3);
+  const deepRose = new Color(0xd67498);
+  const midSakura = new Color(0xf4a6c2);
+  const lightBlush = new Color(0xffdce9);
 
   const totalCards = 115;
   for (let i = 0; i < totalCards; i += 1) {

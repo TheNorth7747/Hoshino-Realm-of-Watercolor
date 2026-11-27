@@ -1,0 +1,215 @@
+{
+  "commitHash": "d904a99475a8d6c7fc04b918a7ac5759aa91787f",
+  "device": {
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "cpuCount": 16,
+    "gpuRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002520) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "gpuVendor": "Google Inc. (NVIDIA)",
+    "memoryGiB": 15.7,
+    "browserUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36",
+    "resolution": "1920x1080",
+    "dpr": 1,
+    "platform": "win32 10.0.26300",
+    "nodeVersion": "v24.22.2"
+  },
+  "sampleDurationSec": 30,
+  "sampleCount": 30,
+  "metrics": {
+    "medianFps": 165,
+    "lowFps": 164.6,
+    "maxDrawCalls": 74,
+    "maxTriangles": 161948
+  },
+  "ac10": {
+    "targetMedianFps": 55,
+    "targetLowFps": 30,
+    "budgetDrawCalls": 180,
+    "budgetTriangles": 350000,
+    "medianPass": true,
+    "lowPass": true,
+    "verdict": "PASS"
+  },
+  "samples": [
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 74,
+      "triangles": 161948
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 73,
+      "triangles": 161948
+    },
+    {
+      "fps": 164.7,
+      "frameTimeMs": 6.07,
+      "drawCalls": 72,
+      "triangles": 160844
+    },
+    {
+      "fps": 165,
+      "frameTimeMs": 6.06,
+      "drawCalls": 69,
+      "triangles": 126257
+    },
+    {
+      "fps": 164.8,
+      "frameTimeMs": 6.07,
+      "drawCalls": 66,
+      "triangles": 142693
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 64,
+      "triangles": 142533
+    },
+    {
+      "fps": 164.8,
+      "frameTimeMs": 6.07,
+      "drawCalls": 60,
+      "triangles": 141525
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 59,
+      "triangles": 140484
+    },
+    {
+      "fps": 164.8,
+      "frameTimeMs": 6.07,
+      "drawCalls": 56,
+      "triangles": 120492
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 55,
+      "triangles": 113841
+    },
+    {
+      "fps": 165.5,
+      "frameTimeMs": 6.04,
+      "drawCalls": 55,
+      "triangles": 113841
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165.2,
+      "frameTimeMs": 6.05,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.9,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165.1,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.9,
+      "frameTimeMs": 6.07,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.6,
+      "frameTimeMs": 6.08,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165.3,
+      "frameTimeMs": 6.05,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.9,
+      "frameTimeMs": 6.07,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165.3,
+      "frameTimeMs": 6.05,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.9,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 165.2,
+      "frameTimeMs": 6.05,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.9,
+      "frameTimeMs": 6.07,
+      "drawCalls": 56,
+      "triangles": 113861
+    },
+    {
+      "fps": 164.9,
+      "frameTimeMs": 6.06,
+      "drawCalls": 56,
+      "triangles": 113861
+    }
+  ],
+  "runtimeErrors": []
+}

@@ -281,8 +281,10 @@ export class CameraRig implements GameSystem {
     this.finaleUserControlled = false;
     this.finaleTargetDistance = CAMERA_FINALE_DISTANCE;
     this.finaleTargetPitch = CAMERA_FINALE_PITCH;
-    // 运镜接管镜头后清空可能残留的输入增量，避免运镜结束瞬间被旧增量顶一下。
-    this.input.handleWindowBlur();
+    // 运镜接管镜头后仅清空残留相机拖拽/滚轮增量，保留 WASD 行走按键（V0.3 接近触发不打断散步）。
+    this.input.setDragging(false);
+    this.input.consumeMouseDelta();
+    this.input.consumeWheelDelta();
   }
 
   /** 阻尼推进运镜（复用其他距离/角度同构的指数阻尼，无计时器硬切）。 */

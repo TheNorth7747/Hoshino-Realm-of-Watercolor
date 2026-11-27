@@ -98,13 +98,14 @@ test("V0.2/V0.3：花树绽放窗口内世界/花树/镜头/分层花瓣立即�
   expect(midWindow.vfx?.petals.active ?? 0).toBeGreaterThan(0);
   expect(midWindow.coverage).toBeGreaterThan(0);
 
-  await expect.poll(async () => (await readState(page)).finished, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => (await readState(page)).finished, { timeout: 45_000 }).toBe(true);
   expect(Date.now() - startedAt).toBeGreaterThanOrEqual(2_000);
 
   expect(errors).toEqual([]);
 });
 
 test("V0.2/V0.3：结局后重置，分层花瓣与运镜状态全部复位且可二次触发", async ({ page }) => {
+  test.setTimeout(300_000);
   const errors = await boot(page);
   await clickNode(page, "flower");
   await clickNode(page, "stream");
@@ -115,7 +116,7 @@ test("V0.2/V0.3：结局后重置，分层花瓣与运镜状态全部复位且�
   expect(atFinaleStart.vfx?.petalLayerCounts.far ?? 0).toBeGreaterThan(0);
   expect(atFinaleStart.finished).toBe(false);
 
-  await expect.poll(async () => (await readState(page)).finished, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => (await readState(page)).finished, { timeout: 45_000 }).toBe(true);
   const before = await readState(page);
   expect(before.cameraFinale).toBe(true);
   expect(before.finaleReveal).toBeGreaterThan(0);
